@@ -4,25 +4,28 @@ use crate::{
 };
 use halo2::arithmetic::FieldExt;
 
-/// Only support `alpha = 5` sbox case
-pub(crate) const ALPHA: u64 = 5;
-
 /// `State` is structure `T` sized field elements that are subjected to
 /// permutation
 #[derive(Clone, Debug, PartialEq)]
 pub struct State<F: FieldExt, const T: usize>(pub(crate) Vector<F, T>);
 
 impl<F: FieldExt, const T: usize> State<F, T> {
-    /// Applies sbox for all elements of the state
+    /// Applies sbox for all elements of the state.
+    /// Only supports `alpha = 5` sbox case.
     pub(crate) fn sbox_full(&mut self) {
         for e in self.0 .0.iter_mut() {
-            *e = e.pow_vartime(&[ALPHA])
+            let tmp = e.mul(*e);
+            e.mul_assign(tmp);
+            e.mul_assign(tmp);
         }
     }
 
-    /// Partial round sbox applies sbox to the first element of the state
+    /// Partial round sbox applies sbox to the first element of the state.
+    /// Only supports `alpha = 5` sbox case
     pub(crate) fn sbox_part(&mut self) {
-        self.0 .0[0] = self.0 .0[0].pow_vartime(&[ALPHA]);
+        let tmp = self.0 .0[0].mul(self.0 .0[0]);
+        self.0 .0[0].mul_assign(tmp);
+        self.0 .0[0].mul_assign(tmp);
     }
 
     /// Adds constants to all elements of the state
