@@ -8,21 +8,17 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Poseidon<F, T, RATE> {
     pub fn permute(&self, state: &mut State<F, T>) {
         let r_f = self.r_f / 2;
 
-        let apply_mds = |state: &mut State<F, T>| self.mds_matrices.mds.apply(state);
-        let apply_pre_sparse_mds =
-            |state: &mut State<F, T>| self.mds_matrices.pre_sparse_mds.apply(state);
-
         // First half of the full rounds
         {
             state.add_constants(&self.constants.start[0]);
             for round_constants in self.constants.start.iter().skip(1).take(r_f - 1) {
                 state.sbox_full();
                 state.add_constants(round_constants);
-                apply_mds(state);
+                self.mds_matrices.mds.apply(state);
             }
             state.sbox_full();
             state.add_constants(self.constants.start.last().unwrap());
-            apply_pre_sparse_mds(state);
+            self.mds_matrices.pre_sparse_mds.apply(state)
         }
 
         // Partial rounds
@@ -44,10 +40,10 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Poseidon<F, T, RATE> {
             for round_constants in self.constants.end.iter() {
                 state.sbox_full();
                 state.add_constants(round_constants);
-                apply_mds(state);
+                self.mds_matrices.mds.apply(state);
             }
             state.sbox_full();
-            apply_mds(state);
+            self.mds_matrices.mds.apply(state);
         }
     }
 }
@@ -56,7 +52,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Poseidon<F, T, RATE> {
 mod tests {
     use super::State;
     use crate::{poseidon::Poseidon, spec::tests::SpecRef};
-    use group::ff::PrimeField;
+    use group::ff::{Field, PrimeField};
     use halo2::arithmetic::FieldExt;
 
     /// We want to keep unoptimized poseidion construction and permutation to
@@ -84,6 +80,56 @@ mod tests {
                 self.mds.apply(state);
             }
         }
+    }
+
+    #[test]
+    fn cross_test() {
+        use halo2::pairing::bn256::Fr;
+
+        use std::time::Instant;
+
+        macro_rules! run_test {
+            (
+                $([$RF:expr, $RP:expr, $T:expr, $RATE:expr]),*
+            ) => {
+                $(
+                    {
+                        const R_F: usize = $RF;
+                        const R_P: usize = $RP;
+                        const T: usize = $T;
+                        const RATE: usize = $RATE;
+                        use rand::thread_rng;
+                        let mut rng = thread_rng();
+                        let mut state = State(
+                            (0..T)
+                                .map(|_| Fr::random(&mut rng))
+                                .collect::<Vec<Fr>>()
+                                .into(),
+                        );
+                        let poseidon_ref = PoseidonRef::<Fr, T, RATE>::new(R_F, R_P);
+                        let mut state_expected = state.clone();
+                        poseidon_ref.permute(&mut state_expected);
+
+                        let poseidon = Poseidon::<Fr, T, RATE>::new(R_F, R_P);
+                        let now = Instant::now();
+                        {
+                            poseidon.permute(&mut state);
+                        }
+                        let elapsed = now.elapsed();
+                        println!("Elapsed: {:.2?}", elapsed);
+                        assert_eq!(state_expected, state);
+                    }
+                )*
+            };
+        }
+        run_test!([8, 57, 3, 2]);
+        run_test!([8, 57, 4, 3]);
+        run_test!([8, 57, 5, 4]);
+        run_test!([8, 57, 6, 5]);
+        run_test!([8, 57, 7, 6]);
+        run_test!([8, 57, 8, 7]);
+        run_test!([8, 57, 9, 8]);
+        run_test!([8, 57, 10, 9]);
     }
 
     #[test]
