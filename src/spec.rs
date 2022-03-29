@@ -9,6 +9,16 @@ use halo2::arithmetic::FieldExt;
 #[derive(Clone, Debug, PartialEq)]
 pub struct State<F: FieldExt, const T: usize>(pub(crate) Vector<F, T>);
 
+impl<F: FieldExt, const T: usize> Default for State<F, T> {
+    /// The capacity value is 2**64 + (o − 1) where o the output length.
+    fn default() -> Self {
+        let mut state = Vector([F::zero(); T]);
+        // TODO/FIX: should capacity value placed in 0th element or (t-1)th element
+        state.0[0] = F::from_u128(1 << 64);
+        State(state)
+    }
+}
+
 impl<F: FieldExt, const T: usize> State<F, T> {
     /// Applies sbox for all elements of the state.
     /// Only supports `alpha = 5` sbox case.
@@ -43,6 +53,11 @@ impl<F: FieldExt, const T: usize> State<F, T> {
     /// Copies elements of the state
     pub(crate) fn words(&self) -> [F; T] {
         self.0 .0
+    }
+
+    /// Second element of the state is the result
+    pub(crate) fn result(&self) -> F {
+        self.0 .0[1]
     }
 }
 

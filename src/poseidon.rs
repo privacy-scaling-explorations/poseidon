@@ -1,211 +1,140 @@
-use crate::spec::{Spec, State};
+use crate::{Spec, State};
 use halo2::arithmetic::FieldExt;
 
-pub type Poseidon<F, const T: usize, const RATE: usize> = Spec<F, T, RATE>;
+/// Poseidon hasher that maintains state and inputs and yields single element
+/// output when desired
+pub struct Poseidon<F: FieldExt, const T: usize, const RATE: usize> {
+    state: State<F, T>,
+    spec: Spec<F, T, RATE>,
+    absorbing: Vec<F>,
+}
 
 impl<F: FieldExt, const T: usize, const RATE: usize> Poseidon<F, T, RATE> {
-    /// Applies the Poseidon permutation to the given state
-    pub fn permute(&self, state: &mut State<F, T>) {
-        let r_f = self.r_f / 2;
+    /// Constructs a clear state poseidon instance
+    pub fn new(r_f: usize, r_p: usize) -> Self {
+        Self {
+            spec: Spec::new(r_f, r_p),
+            state: State::default(),
+            absorbing: Vec::new(),
+        }
+    }
 
-        // First half of the full rounds
-        {
-            state.add_constants(&self.constants.start[0]);
-            for round_constants in self.constants.start.iter().skip(1).take(r_f - 1) {
-                state.sbox_full();
-                state.add_constants(round_constants);
-                self.mds_matrices.mds.apply(state);
+    /// Appends elements to the absorbation line
+    pub fn update(&mut self, elements: &[F]) {
+        // TODO: if `RATE` is full spawn a permutation here
+        self.absorbing.extend_from_slice(elements);
+    }
+
+    /// Results a single element by absorbing already added inputs
+    pub fn squeeze(&mut self) -> F {
+        let mut padding_offset = 0;
+        let input_elements = self.absorbing.clone();
+        for chunk in input_elements.chunks(RATE) {
+            // `padding_offset` is expected to be in [0, RATE-1]
+            padding_offset = RATE - chunk.len();
+            let mut chunk = chunk.to_vec();
+            if padding_offset > 0 {
+                chunk.push(F::one())
             }
-            state.sbox_full();
-            state.add_constants(self.constants.start.last().unwrap());
-            self.mds_matrices.pre_sparse_mds.apply(state)
+
+            // Add new chunk of inputs for the next permutation cycle
+            for (input_element, state) in chunk.iter().zip(self.state.0 .0.iter_mut().skip(1)) {
+                state.add_assign(input_element);
+            }
+            self.permute();
         }
 
-        // Partial rounds
-        {
-            for (round_constant, sparse_mds) in (self)
-                .constants
-                .partial
-                .iter()
-                .zip(self.mds_matrices.sparse_matrices.iter())
-            {
-                state.sbox_part();
-                state.add_constant(round_constant);
-                sparse_mds.apply(state);
-            }
-        }
+        // TODO/FIX: can we avoid this in the on going transcript squeezing context?
+        self.finalize_padding(padding_offset == 0);
+        self.finalize()
+    }
 
-        // Second half of the full rounds
-        {
-            for round_constants in self.constants.end.iter() {
-                state.sbox_full();
-                state.add_constants(round_constants);
-                self.mds_matrices.mds.apply(state);
-            }
-            state.sbox_full();
-            self.mds_matrices.mds.apply(state);
+    fn permute(&mut self) {
+        self.spec.permute(&mut self.state)
+    }
+
+    // If there is no room left for the padding sign add it to the state and
+    // perform one more permutation
+    fn finalize_padding(&mut self, must_perform: bool) {
+        if must_perform {
+            self.state.0 .0[1].add_assign(F::one());
+            self.permute();
         }
+    }
+
+    /// Flushes absorbation line and returns the result
+    fn finalize(&mut self) -> F {
+        self.absorbing.clear();
+        self.state.result()
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::State;
-    use crate::{poseidon::Poseidon, spec::tests::SpecRef};
-    use group::ff::{Field, PrimeField};
-    use halo2::arithmetic::FieldExt;
+#[test]
+fn test_padding() {
+    use halo2::arithmetic::Field;
+    use halo2::pairing::bn256::Fr;
 
-    /// We want to keep unoptimized poseidion construction and permutation to
-    /// cross test with optimized one
-    type PoseidonRef<F, const T: usize, const RATE: usize> = SpecRef<F, T, RATE>;
-    impl<F: FieldExt, const T: usize, const RATE: usize> PoseidonRef<F, T, RATE> {
-        fn permute(&self, state: &mut State<F, T>) {
-            let (r_f, r_p) = (self.r_f / 2, self.r_p);
+    const R_F: usize = 8;
+    const R_P: usize = 57;
+    const T: usize = 5;
+    const RATE: usize = 4;
+    use rand::thread_rng;
+    let mut rng = thread_rng();
 
-            for constants in self.constants.iter().take(r_f) {
-                state.add_constants(constants);
-                state.sbox_full();
-                self.mds.apply(state);
-            }
+    // w/o extra permutation
+    {
+        let mut poseidon = Poseidon::<Fr, T, RATE>::new(R_F, R_P);
+        let number_of_permutation = 5;
+        let number_of_inputs = RATE * number_of_permutation - 1;
+        let inputs = (0..number_of_inputs)
+            .map(|_| Fr::random(&mut rng))
+            .collect::<Vec<Fr>>();
+        poseidon.update(&inputs[..]);
+        let result_0 = poseidon.squeeze();
 
-            for constants in self.constants.iter().skip(r_f).take(r_p) {
-                state.add_constants(constants);
-                state.sbox_part();
-                self.mds.apply(state);
-            }
-
-            for constants in self.constants.iter().skip(r_f + r_p) {
-                state.add_constants(constants);
-                state.sbox_full();
-                self.mds.apply(state);
-            }
+        let spec = poseidon.spec.clone();
+        let mut inputs = inputs.clone();
+        inputs.push(Fr::one());
+        assert!(inputs.len() % RATE == 0);
+        let mut state = State::<Fr, T>::default();
+        for chunk in inputs.chunks(RATE) {
+            let mut inputs = vec![Fr::zero()];
+            inputs.extend_from_slice(chunk);
+            state.add_constants(&inputs.into());
+            spec.permute(&mut state)
         }
+        let result_1 = state.result();
+
+        assert_eq!(result_0, result_1);
     }
 
-    #[test]
-    fn cross_test() {
-        use halo2::pairing::bn256::Fr;
+    // w/ extra permutation
+    {
+        let mut poseidon = Poseidon::<Fr, T, RATE>::new(R_F, R_P);
+        let number_of_permutation = 5;
+        let number_of_inputs = RATE * number_of_permutation;
+        let inputs = (0..number_of_inputs)
+            .map(|_| Fr::random(&mut rng))
+            .collect::<Vec<Fr>>();
+        poseidon.update(&inputs[..]);
+        let result_0 = poseidon.squeeze();
 
-        use std::time::Instant;
+        let spec = poseidon.spec.clone();
+        let mut inputs = inputs.clone();
+        let mut extra_padding = vec![Fr::zero(); RATE];
+        extra_padding[0] = Fr::one();
+        inputs.extend(extra_padding);
 
-        macro_rules! run_test {
-            (
-                $([$RF:expr, $RP:expr, $T:expr, $RATE:expr]),*
-            ) => {
-                $(
-                    {
-                        const R_F: usize = $RF;
-                        const R_P: usize = $RP;
-                        const T: usize = $T;
-                        const RATE: usize = $RATE;
-                        use rand::thread_rng;
-                        let mut rng = thread_rng();
-                        let mut state = State(
-                            (0..T)
-                                .map(|_| Fr::random(&mut rng))
-                                .collect::<Vec<Fr>>()
-                                .into(),
-                        );
-                        let poseidon_ref = PoseidonRef::<Fr, T, RATE>::new(R_F, R_P);
-                        let mut state_expected = state.clone();
-                        poseidon_ref.permute(&mut state_expected);
-
-                        let poseidon = Poseidon::<Fr, T, RATE>::new(R_F, R_P);
-                        let now = Instant::now();
-                        {
-                            poseidon.permute(&mut state);
-                        }
-                        let elapsed = now.elapsed();
-                        println!("Elapsed: {:.2?}", elapsed);
-                        assert_eq!(state_expected, state);
-                    }
-                )*
-            };
+        assert!(inputs.len() % RATE == 0);
+        let mut state = State::<Fr, T>::default();
+        for chunk in inputs.chunks(RATE) {
+            let mut inputs = vec![Fr::zero()];
+            inputs.extend_from_slice(chunk);
+            state.add_constants(&inputs.into());
+            spec.permute(&mut state)
         }
-        run_test!([8, 57, 3, 2]);
-        run_test!([8, 57, 4, 3]);
-        run_test!([8, 57, 5, 4]);
-        run_test!([8, 57, 6, 5]);
-        run_test!([8, 57, 7, 6]);
-        run_test!([8, 57, 8, 7]);
-        run_test!([8, 57, 9, 8]);
-        run_test!([8, 57, 10, 9]);
-    }
+        let result_1 = state.result();
 
-    #[test]
-    fn test_against_test_vectors() {
-        use halo2::pairing::bn256::Fr;
-
-        // https://extgit.iaik.tugraz.at/krypto/hadeshash/-/blob/master/code/test_vectors.txt
-        // poseidonperm_x5_254_3
-        {
-            const R_F: usize = 8;
-            const R_P: usize = 57;
-            const T: usize = 3;
-            const RATE: usize = 2;
-
-            let state = State(
-                vec![0u64, 1, 2]
-                    .into_iter()
-                    .map(Fr::from)
-                    .collect::<Vec<Fr>>()
-                    .into(),
-            );
-
-            let poseidon_ref = PoseidonRef::<Fr, T, RATE>::new(R_F, R_P);
-            let mut state_0 = state.clone();
-
-            poseidon_ref.permute(&mut state_0);
-            let expected = vec![
-                "7853200120776062878684798364095072458815029376092732009249414926327459813530",
-                "7142104613055408817911962100316808866448378443474503659992478482890339429929",
-                "6549537674122432311777789598043107870002137484850126429160507761192163713804",
-            ];
-            for (word, expected) in state_0.words().into_iter().zip(expected.iter()) {
-                assert_eq!(word, Fr::from_str_vartime(expected).unwrap());
-            }
-
-            let poseidon = Poseidon::<Fr, T, RATE>::new(R_F, R_P);
-            let mut state_1 = state;
-            poseidon.permute(&mut state_1);
-            assert_eq!(state_0, state_1);
-        }
-
-        // https://extgit.iaik.tugraz.at/krypto/hadeshash/-/blob/master/code/test_vectors.txt
-        // poseidonperm_x5_254_5
-        {
-            const R_F: usize = 8;
-            const R_P: usize = 60;
-            const T: usize = 5;
-            const RATE: usize = 4;
-
-            let state = State(
-                vec![0u64, 1, 2, 3, 4]
-                    .into_iter()
-                    .map(Fr::from)
-                    .collect::<Vec<Fr>>()
-                    .into(),
-            );
-
-            let poseidon_ref = PoseidonRef::<Fr, T, RATE>::new(R_F, R_P);
-            let mut state_0 = state.clone();
-
-            poseidon_ref.permute(&mut state_0);
-            let expected = vec![
-                "18821383157269793795438455681495246036402687001665670618754263018637548127333",
-                "7817711165059374331357136443537800893307845083525445872661165200086166013245",
-                "16733335996448830230979566039396561240864200624113062088822991822580465420551",
-                "6644334865470350789317807668685953492649391266180911382577082600917830417726",
-                "3372108894677221197912083238087960099443657816445944159266857514496320565191",
-            ];
-            for (word, expected) in state_0.words().into_iter().zip(expected.iter()) {
-                assert_eq!(word, Fr::from_str_vartime(expected).unwrap());
-            }
-
-            let poseidon = Poseidon::<Fr, T, RATE>::new(R_F, R_P);
-            let mut state_1 = state;
-            poseidon.permute(&mut state_1);
-            assert_eq!(state_0, state_1);
-        }
+        assert_eq!(result_0, result_1);
     }
 }
