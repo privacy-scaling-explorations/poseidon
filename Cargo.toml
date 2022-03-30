@@ -5,10 +5,13 @@ authors = ["kilic <kiliconu@itu.edu.tr>"]
 edition = "2021"
 
 [dependencies]
-halo2 = { package = "halo2_proofs", git = "https://github.com/appliedzkp/halo2.git", rev = "9d3ab0cf7be57a828df6cedb8f58476b483fdde1" }
+halo2 = { package = "halo2_proofs", git = "https://github.com/appliedzkp/halo2.git" }
 rand = "0.8"
 group = "0.11"
 subtle = { version = "2.3", default-features = false }
+num-bigint = { version = "0.4", features = ["rand"] }
+num-integer = "0.1"
+num-traits = "0.2"
 
 [dev-dependencies]
 rand_core = { version = "0.6", default-features = false }

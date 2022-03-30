@@ -12,6 +12,6 @@ Work in progress SNARK and non native recursion friendly transcript for [applied
 Map:
 
 - [x] Optimized permutation
-- [x] Paddind and absorbing
-- [ ] Transcript pipeline with non native inputs
+- [x] Paddind and absorbing for variable length hashing
+- [x] Transcript pipeline with non native inputs
 - [ ] Transcript circuit will be under [appliedzkp/halo2wrong](https://github.com/appliedzkp/halo2wrong)
