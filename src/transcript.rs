@@ -251,3 +251,74 @@ impl<C: CurveAffine> EncodedChallenge<C> for Challenge<C> {
         self.0
     }
 }
+
+#[test]
+fn test_transcript() {
+    use halo2::pairing::bn256::{Fr, G1Affine};
+    use rand::thread_rng;
+    let mut rng = thread_rng();
+
+    const R_F: usize = 8;
+    const R_P: usize = 57;
+
+    macro_rules! init_writer {
+        () => {
+            PoseidonWrite::<_, G1Affine, Challenge<_>, LimbRepresentation<_, 4, 68>, 3, 2>::init(
+                vec![],
+                R_F,
+                R_P,
+            )
+        };
+    }
+
+    macro_rules! init_reader {
+        ($proof:expr) => {
+            PoseidonRead::<_, G1Affine, Challenge<_>, LimbRepresentation<_, 4, 68>, 3, 2>::init(
+                &$proof[..],
+                R_F,
+                R_P,
+            )
+        };
+    }
+
+    let mut writer = init_writer!();
+    let s_0 = writer.squeeze_challenge();
+    let proof = writer.finalize();
+
+    let mut reader = init_reader!(proof);
+    let s_1 = reader.squeeze_challenge();
+    assert_eq!(s_0.get_scalar(), s_1.get_scalar());
+
+    let p0 = G1Affine::random(&mut rng);
+    let p1 = G1Affine::random(&mut rng);
+    let p2 = G1Affine::random(&mut rng);
+    let p3 = G1Affine::random(&mut rng);
+    let e0 = Fr::random(&mut rng);
+    let e1 = Fr::random(&mut rng);
+    let e2 = Fr::random(&mut rng);
+    let e3 = Fr::random(&mut rng);
+
+    let mut writer = init_writer!();
+    writer.write_point(p0).unwrap();
+    writer.write_point(p1).unwrap();
+    writer.write_scalar(e0).unwrap();
+    writer.write_scalar(e1).unwrap();
+    writer.write_scalar(e2).unwrap();
+    writer.write_scalar(e3).unwrap();
+    writer.write_point(p2).unwrap();
+    writer.write_point(p3).unwrap();
+    let s_0 = writer.squeeze_challenge();
+    let proof = writer.finalize();
+
+    let mut reader = init_reader!(proof);
+    assert_eq!(reader.read_point().unwrap(), p0);
+    assert_eq!(reader.read_point().unwrap(), p1);
+    assert_eq!(reader.read_scalar().unwrap(), e0);
+    assert_eq!(reader.read_scalar().unwrap(), e1);
+    assert_eq!(reader.read_scalar().unwrap(), e2);
+    assert_eq!(reader.read_scalar().unwrap(), e3);
+    assert_eq!(reader.read_point().unwrap(), p2);
+    assert_eq!(reader.read_point().unwrap(), p3);
+    let s_1 = reader.squeeze_challenge();
+    assert_eq!(s_0.get_scalar(), s_1.get_scalar());
+}
