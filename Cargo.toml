@@ -1,5 +1,5 @@
 [package]
-name = "transcript"
+name = "poseidon"
 version = "0.1.0"
 authors = ["kilic <kiliconu@itu.edu.tr>"]
 edition = "2021"
