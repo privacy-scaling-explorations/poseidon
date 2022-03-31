@@ -2,7 +2,7 @@ use crate::{
     grain::Grain,
     matrix::{Matrix, Vector},
 };
-use halo2::arithmetic::FieldExt;
+use pairing::arithmetic::FieldExt;
 
 /// `State` is structure `T` sized field elements that are subjected to
 /// permutation
@@ -327,7 +327,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
 
 #[cfg(test)]
 pub(super) mod tests {
-    use halo2::arithmetic::FieldExt;
+    use pairing::arithmetic::FieldExt;
 
     use super::MDSMatrix;
     use crate::{grain::Grain, matrix::Vector};

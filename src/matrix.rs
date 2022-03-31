@@ -3,7 +3,7 @@
 //! with the intention of construction of parameters and are not used actual
 //! permutation process.
 
-use halo2::arithmetic::FieldExt;
+use pairing::arithmetic::FieldExt;
 
 #[derive(PartialEq, Debug, Clone)]
 pub(crate) struct Vector<F: FieldExt, const T: usize>(pub(crate) [F; T]);
