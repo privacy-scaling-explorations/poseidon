@@ -3,6 +3,7 @@ use pairing::arithmetic::FieldExt;
 
 /// Poseidon hasher that maintains state and inputs and yields single element
 /// output when desired
+#[derive(Debug, Clone)]
 pub struct Poseidon<F: FieldExt, const T: usize, const RATE: usize> {
     state: State<F, T>,
     spec: Spec<F, T, RATE>,
