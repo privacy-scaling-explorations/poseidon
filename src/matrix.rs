@@ -3,14 +3,25 @@
 //! with the intention of construction of parameters and are not used actual
 //! permutation process.
 
+use std::ops::Index;
+
 use pairing::arithmetic::FieldExt;
 
+/// `Vector` is `T` sized field element array.
 #[derive(PartialEq, Debug, Clone)]
-pub(crate) struct Vector<F: FieldExt, const T: usize>(pub(crate) [F; T]);
+pub struct Vector<F: FieldExt, const T: usize>(pub(crate) [F; T]);
 
 impl<F: FieldExt, const T: usize> Default for Vector<F, T> {
     fn default() -> Self {
         Self([F::zero(); T])
+    }
+}
+
+impl<F: FieldExt, const T: usize> Index<usize> for Vector<F, T> {
+    type Output = F;
+
+    fn index(&self, idx: usize) -> &Self::Output {
+        &self.0[idx]
     }
 }
 

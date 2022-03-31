@@ -1,3 +1,5 @@
+use std::ops::Index;
+
 use crate::{
     grain::Grain,
     matrix::{Matrix, Vector},
@@ -67,36 +69,42 @@ impl<F: FieldExt, const T: usize> State<F, T> {
 /// constants.
 #[derive(Debug, Clone)]
 pub struct Spec<F: FieldExt, const T: usize, const RATE: usize> {
-    pub(crate) r_f: usize,
-    pub(crate) mds_matrices: MDSMatrices<F, T, RATE>,
-    pub(crate) constants: OptimizedConstants<F, T>,
+    pub r_f: usize,
+    pub mds_matrices: MDSMatrices<F, T, RATE>,
+    pub constants: OptimizedConstants<F, T>,
 }
 
 /// `OptimizedConstants` has round constants that are added each round. While
 /// full rounds has T sized constants there is a single constant for each
 /// partial round
 #[derive(Debug, Clone)]
-pub(crate) struct OptimizedConstants<F: FieldExt, const T: usize> {
-    pub(crate) start: Vec<Vector<F, T>>,
-    pub(crate) partial: Vec<F>,
-    pub(crate) end: Vec<Vector<F, T>>,
+pub struct OptimizedConstants<F: FieldExt, const T: usize> {
+    pub start: Vec<Vector<F, T>>,
+    pub partial: Vec<F>,
+    pub end: Vec<Vector<F, T>>,
 }
 
 /// `MDSMatrices` holds the MDS matrix as well as transition matrix which is
 /// also called `pre_sparse_mds` and sparse matrices that enables us to reduce
 /// number of multiplications in apply MDS step
 #[derive(Debug, Clone)]
-pub(crate) struct MDSMatrices<F: FieldExt, const T: usize, const RATE: usize> {
-    pub(crate) mds: MDSMatrix<F, T, RATE>,
-    pub(crate) pre_sparse_mds: MDSMatrix<F, T, RATE>,
-    pub(crate) sparse_matrices: Vec<SparseMDSMatrix<F, T, RATE>>,
+pub struct MDSMatrices<F: FieldExt, const T: usize, const RATE: usize> {
+    pub mds: MDSMatrix<F, T, RATE>,
+    pub pre_sparse_mds: MDSMatrix<F, T, RATE>,
+    pub sparse_matrices: Vec<SparseMDSMatrix<F, T, RATE>>,
 }
 
 /// `MDSMatrix` is applied to `State` to achive linear layer of Poseidon
 #[derive(Clone, Debug)]
-pub(crate) struct MDSMatrix<F: FieldExt, const T: usize, const RATE: usize>(
-    pub(crate) Matrix<F, T>,
-);
+pub struct MDSMatrix<F: FieldExt, const T: usize, const RATE: usize>(pub(crate) Matrix<F, T>);
+
+impl<F: FieldExt, const T: usize, const RATE: usize> Index<usize> for MDSMatrix<F, T, RATE> {
+    type Output = [F; T];
+
+    fn index(&self, idx: usize) -> &Self::Output {
+        &self.0 .0[idx]
+    }
+}
 
 impl<F: FieldExt, const T: usize, const RATE: usize> MDSMatrix<F, T, RATE> {
     /// Applies `MDSMatrix` to the state
@@ -176,9 +184,9 @@ impl<F: FieldExt, const T: usize, const RATE: usize> MDSMatrix<F, T, RATE> {
 /// `SparseMDSMatrix` are in `[row], [hat | identity]` form and used in linear
 /// layer of partial rounds instead of the original MDS
 #[derive(Debug, Clone)]
-pub(crate) struct SparseMDSMatrix<F: FieldExt, const T: usize, const RATE: usize> {
-    row: [F; T],
-    col_hat: [F; RATE],
+pub struct SparseMDSMatrix<F: FieldExt, const T: usize, const RATE: usize> {
+    pub row: [F; T],
+    pub col_hat: [F; RATE],
 }
 
 impl<F: FieldExt, const T: usize, const RATE: usize> SparseMDSMatrix<F, T, RATE> {
