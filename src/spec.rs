@@ -19,6 +19,11 @@ impl<F: FieldExt, const T: usize> Default for State<F, T> {
 }
 
 impl<F: FieldExt, const T: usize> State<F, T> {
+    /// Creates new state with predefined words
+    pub fn new(state: [F; T]) -> Self {
+        State(state)
+    }
+
     /// Applies sbox for all elements of the state.
     /// Only supports `alpha = 5` sbox case.
     pub(crate) fn sbox_full(&mut self) {
@@ -52,12 +57,12 @@ impl<F: FieldExt, const T: usize> State<F, T> {
     }
 
     /// Copies elements of the state
-    pub(crate) fn words(&self) -> [F; T] {
+    pub fn words(&self) -> [F; T] {
         self.0
     }
 
     /// Second element of the state is the result
-    pub(crate) fn result(&self) -> F {
+    pub fn result(&self) -> F {
         self.0[1]
     }
 }
