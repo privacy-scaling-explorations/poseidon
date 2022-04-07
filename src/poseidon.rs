@@ -39,7 +39,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Poseidon<F, T, RATE> {
             }
 
             // Add new chunk of inputs for the next permutation cycle
-            for (input_element, state) in chunk.iter().zip(self.state.0 .0.iter_mut().skip(1)) {
+            for (input_element, state) in chunk.iter().zip(self.state.0.iter_mut().skip(1)) {
                 state.add_assign(input_element);
             }
             self.permute();
@@ -58,7 +58,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Poseidon<F, T, RATE> {
     // perform one more permutation
     fn finalize_padding(&mut self, must_perform: bool) {
         if must_perform {
-            self.state.0 .0[1].add_assign(F::one());
+            self.state.0[1].add_assign(F::one());
             self.permute();
         }
     }
@@ -101,7 +101,7 @@ fn test_padding() {
         for chunk in inputs.chunks(RATE) {
             let mut inputs = vec![Fr::zero()];
             inputs.extend_from_slice(chunk);
-            state.add_constants(&inputs.into());
+            state.add_constants(&inputs.try_into().unwrap());
             spec.permute(&mut state)
         }
         let result_1 = state.result();
@@ -131,7 +131,7 @@ fn test_padding() {
         for chunk in inputs.chunks(RATE) {
             let mut inputs = vec![Fr::zero()];
             inputs.extend_from_slice(chunk);
-            state.add_constants(&inputs.into());
+            state.add_constants(&inputs.try_into().unwrap());
             spec.permute(&mut state)
         }
         let result_1 = state.result();

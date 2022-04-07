@@ -4,6 +4,5 @@ mod permutation;
 mod poseidon;
 mod spec;
 
-pub use crate::matrix::Vector;
 pub use crate::poseidon::Poseidon;
 pub use crate::spec::{MDSMatrices, MDSMatrix, SparseMDSMatrix, Spec, State};

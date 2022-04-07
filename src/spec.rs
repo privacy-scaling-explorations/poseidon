@@ -1,22 +1,19 @@
 use std::ops::Index;
 
-use crate::{
-    grain::Grain,
-    matrix::{Matrix, Vector},
-};
+use crate::{grain::Grain, matrix::Matrix};
 use pairing::arithmetic::FieldExt;
 
 /// `State` is structure `T` sized field elements that are subjected to
 /// permutation
 #[derive(Clone, Debug, PartialEq)]
-pub struct State<F: FieldExt, const T: usize>(pub(crate) Vector<F, T>);
+pub struct State<F: FieldExt, const T: usize>(pub(crate) [F; T]);
 
 impl<F: FieldExt, const T: usize> Default for State<F, T> {
     /// The capacity value is 2**64 + (o − 1) where o the output length.
     fn default() -> Self {
-        let mut state = Vector([F::zero(); T]);
+        let mut state = [F::zero(); T];
         // TODO/FIX: should capacity value placed in 0th element or (t-1)th element
-        state.0[0] = F::from_u128(1 << 64);
+        state[0] = F::from_u128(1 << 64);
         State(state)
     }
 }
@@ -25,7 +22,7 @@ impl<F: FieldExt, const T: usize> State<F, T> {
     /// Applies sbox for all elements of the state.
     /// Only supports `alpha = 5` sbox case.
     pub(crate) fn sbox_full(&mut self) {
-        for e in self.0 .0.iter_mut() {
+        for e in self.0.iter_mut() {
             let tmp = e.mul(*e);
             e.mul_assign(tmp);
             e.mul_assign(tmp);
@@ -35,31 +32,33 @@ impl<F: FieldExt, const T: usize> State<F, T> {
     /// Partial round sbox applies sbox to the first element of the state.
     /// Only supports `alpha = 5` sbox case
     pub(crate) fn sbox_part(&mut self) {
-        let tmp = self.0 .0[0].mul(self.0 .0[0]);
-        self.0 .0[0].mul_assign(tmp);
-        self.0 .0[0].mul_assign(tmp);
+        let tmp = self.0[0].mul(self.0[0]);
+        self.0[0].mul_assign(tmp);
+        self.0[0].mul_assign(tmp);
     }
 
     /// Adds constants to all elements of the state
-    pub(crate) fn add_constants(&mut self, constants: &Vector<F, T>) {
-        self.0.add_assign(constants)
+    pub(crate) fn add_constants(&mut self, constants: &[F; T]) {
+        for (e, constant) in self.0.iter_mut().zip(constants.iter()) {
+            e.add_assign(constant)
+        }
     }
 
     /// Only adds a constant to the first element of the state.It is used with
     /// optimized rounds constants where only single element is added in
     /// each partial round
     pub(crate) fn add_constant(&mut self, constant: &F) {
-        self.0 .0[0].add_assign(constant)
+        self.0[0].add_assign(constant)
     }
 
     /// Copies elements of the state
     pub(crate) fn words(&self) -> [F; T] {
-        self.0 .0
+        self.0
     }
 
     /// Second element of the state is the result
     pub(crate) fn result(&self) -> F {
-        self.0 .0[1]
+        self.0[1]
     }
 }
 
@@ -79,9 +78,9 @@ pub struct Spec<F: FieldExt, const T: usize, const RATE: usize> {
 /// partial round
 #[derive(Debug, Clone)]
 pub struct OptimizedConstants<F: FieldExt, const T: usize> {
-    pub start: Vec<Vector<F, T>>,
+    pub start: Vec<[F; T]>,
     pub partial: Vec<F>,
-    pub end: Vec<Vector<F, T>>,
+    pub end: Vec<[F; T]>,
 }
 
 /// `MDSMatrices` holds the MDS matrix as well as transition matrix which is
@@ -113,10 +112,10 @@ impl<F: FieldExt, const T: usize, const RATE: usize> MDSMatrix<F, T, RATE> {
     }
 
     /// Given two `T` sized vector constructs the `t * t` Cauchy matrix
-    pub(super) fn cauchy(xs: &Vector<F, T>, ys: &Vector<F, T>) -> Self {
+    pub(super) fn cauchy(xs: &[F; T], ys: &[F; T]) -> Self {
         let mut m = Matrix::default();
-        for (i, x) in xs.0.iter().enumerate() {
-            for (j, y) in ys.0.iter().enumerate() {
+        for (i, x) in xs.iter().enumerate() {
+            for (j, y) in ys.iter().enumerate() {
                 let sum = *x + *y;
                 assert!(!sum.is_zero_vartime());
                 m.set(i, j, sum.invert().unwrap());
@@ -132,7 +131,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> MDSMatrix<F, T, RATE> {
 
     /// Used in calculation of optimized round constants. Calculates `v' = M *
     /// v` where vectors are `T` sized
-    fn mul_constants(&self, v: &Vector<F, T>) -> Vector<F, T> {
+    fn mul_constants(&self, v: &[F; T]) -> [F; T] {
         self.0.mul_vector(v)
     }
 
@@ -164,10 +163,10 @@ impl<F: FieldExt, const T: usize, const RATE: usize> MDSMatrix<F, T, RATE> {
 
         // Given `(t-1)` sized `w_hat` vector constructs the matrix in form
         // `[[m_0_0 | m_0_i], [w_hat | identity]]`
-        let prime_prime = |w_hat: Vector<F, RATE>| -> Self {
+        let prime_prime = |w_hat: [F; RATE]| -> Self {
             let mut prime_prime = Matrix::identity();
             prime_prime.0[0] = self.0 .0[0];
-            for (row, w) in prime_prime.0.iter_mut().skip(1).zip(w_hat.0.iter()) {
+            for (row, w) in prime_prime.0.iter_mut().skip(1).zip(w_hat.iter()) {
                 row[0] = *w
             }
             Self(prime_prime)
@@ -178,6 +177,10 @@ impl<F: FieldExt, const T: usize, const RATE: usize> MDSMatrix<F, T, RATE> {
         let m_hat_inverse = m_hat.invert();
         let w_hat = m_hat_inverse.mul_vector(&w);
         (prime(m_hat), prime_prime(w_hat).transpose().into())
+    }
+
+    pub fn rows(&self) -> [[F; T]; T] {
+        self.0 .0
     }
 }
 
@@ -193,13 +196,13 @@ impl<F: FieldExt, const T: usize, const RATE: usize> SparseMDSMatrix<F, T, RATE>
     /// Applies the sparse MDS matrix to the state
     pub(crate) fn apply(&self, state: &mut State<F, T>) {
         let words = state.words();
-        state.0 .0[0] = self
+        state.0[0] = self
             .row
             .iter()
             .zip(words.iter())
             .fold(F::zero(), |acc, (e, cell)| acc + (*e * *cell));
 
-        for ((new_word, col_el), word) in (state.0 .0)
+        for ((new_word, col_el), word) in (state.0)
             .iter_mut()
             .skip(1)
             .zip(self.col_hat.iter())
@@ -257,7 +260,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
     fn calculate_optimized_constants(
         r_f: usize,
         r_p: usize,
-        constants: Vec<Vector<F, T>>,
+        constants: Vec<[F; T]>,
         mds: &MDSMatrix<F, T, RATE>,
     ) -> OptimizedConstants<F, T> {
         let inverse_mds = mds.invert();
@@ -265,7 +268,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
         assert_eq!(constants.len(), number_of_rounds);
 
         // Calculate optimized constants for first half of the full rounds
-        let mut constants_start: Vec<Vector<F, T>> = vec![Vector::default(); r_f_half];
+        let mut constants_start: Vec<[F; T]> = vec![[F::zero(); T]; r_f_half];
         constants_start[0] = constants[0].clone();
         for (optimized, constants) in constants_start
             .iter_mut()
@@ -284,14 +287,13 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
             .zip(constants.iter().skip(r_f_half).rev().skip(r_f_half))
         {
             let mut tmp = inverse_mds.mul_constants(&acc);
-            *optimized = tmp.0[0];
+            *optimized = tmp[0];
 
-            tmp.0[0] = F::zero();
+            tmp[0] = F::zero();
             for ((acc, tmp), constant) in acc
-                .0
                 .iter_mut()
-                .zip(tmp.0.into_iter())
-                .zip(constants.0.into_iter())
+                .zip(tmp.into_iter())
+                .zip(constants.into_iter())
             {
                 *acc = tmp + constant
             }
@@ -299,7 +301,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
         constants_start.push(inverse_mds.mul_constants(&acc));
 
         // Calculate optimized constants for ending half of the full rounds
-        let mut constants_end: Vec<Vector<F, T>> = vec![Vector::default(); r_f_half - 1];
+        let mut constants_end: Vec<[F; T]> = vec![[F::zero(); T]; r_f_half - 1];
         for (optimized, constants) in constants_end
             .iter_mut()
             .zip(constants.iter().skip(r_f_half + r_p + 1))
@@ -338,14 +340,14 @@ pub(super) mod tests {
     use pairing::arithmetic::FieldExt;
 
     use super::MDSMatrix;
-    use crate::{grain::Grain, matrix::Vector};
+    use crate::grain::Grain;
 
     /// We want to keep unoptimized parameters to cross test with optimized one
     pub(crate) struct SpecRef<F: FieldExt, const T: usize, const RATE: usize> {
         pub(crate) r_f: usize,
         pub(crate) r_p: usize,
         pub(crate) mds: MDSMatrix<F, T, RATE>,
-        pub(crate) constants: Vec<Vector<F, T>>,
+        pub(crate) constants: Vec<[F; T]>,
     }
 
     impl<F: FieldExt, const T: usize, const RATE: usize> SpecRef<F, T, RATE> {

@@ -3,45 +3,7 @@
 //! with the intention of construction of parameters and are not used actual
 //! permutation process.
 
-use std::ops::Index;
-
 use pairing::arithmetic::FieldExt;
-
-/// `Vector` is `T` sized field element array.
-#[derive(PartialEq, Debug, Clone)]
-pub struct Vector<F: FieldExt, const T: usize>(pub(crate) [F; T]);
-
-impl<F: FieldExt, const T: usize> Default for Vector<F, T> {
-    fn default() -> Self {
-        Self([F::zero(); T])
-    }
-}
-
-impl<F: FieldExt, const T: usize> Index<usize> for Vector<F, T> {
-    type Output = F;
-
-    fn index(&self, idx: usize) -> &Self::Output {
-        &self.0[idx]
-    }
-}
-
-impl<F: FieldExt, const T: usize> From<Vec<F>> for Vector<F, T> {
-    fn from(v: Vec<F>) -> Self {
-        let mut res = Vector::default();
-        for (this, other) in res.0.iter_mut().zip(v.into_iter()) {
-            *this = other
-        }
-        res
-    }
-}
-
-impl<F: FieldExt, const T: usize> Vector<F, T> {
-    pub(crate) fn add_assign(&mut self, other: &Self) {
-        for (e, other) in self.0.iter_mut().zip(other.0.iter()) {
-            *e += other
-        }
-    }
-}
 
 #[derive(PartialEq, Debug, Clone)]
 pub(crate) struct Matrix<F: FieldExt, const T: usize>(pub(crate) [[F; T]; T]);
@@ -107,10 +69,10 @@ impl<F: FieldExt, const T: usize> Matrix<F, T> {
         result
     }
 
-    pub(crate) fn mul_vector(&self, v: &Vector<F, T>) -> Vector<F, T> {
-        let mut result = Vector::default();
-        for (row, cell) in self.0.iter().zip(result.0.iter_mut()) {
-            for (a_i, v_i) in row.iter().zip(v.0.iter()) {
+    pub(crate) fn mul_vector(&self, v: &[F; T]) -> [F; T] {
+        let mut result = [F::zero(); T];
+        for (row, cell) in self.0.iter().zip(result.iter_mut()) {
+            for (a_i, v_i) in row.iter().zip(v.iter()) {
                 *cell += *v_i * *a_i;
             }
         }
@@ -161,14 +123,15 @@ impl<F: FieldExt, const T: usize> Matrix<F, T> {
         res
     }
 
-    pub(crate) fn w<const RATE: usize>(&self) -> Vector<F, RATE> {
+    pub(crate) fn w<const RATE: usize>(&self) -> [F; RATE] {
         assert_eq!(RATE + 1, T);
         self.0
             .iter()
             .skip(1)
             .map(|row| row[0])
             .collect::<Vec<F>>()
-            .into()
+            .try_into()
+            .unwrap()
     }
 
     pub(crate) fn sub<const RATE: usize>(&self) -> Matrix<F, RATE> {

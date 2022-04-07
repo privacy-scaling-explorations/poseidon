@@ -1,4 +1,3 @@
-use crate::matrix::Vector;
 use crate::spec::MDSMatrix;
 use pairing::arithmetic::FieldExt;
 use std::marker::PhantomData;
@@ -10,7 +9,7 @@ pub(super) struct Grain<F: FieldExt, const T: usize, const RATE: usize> {
 }
 
 impl<F: FieldExt, const T: usize, const RATE: usize> Grain<F, T, RATE> {
-    pub(crate) fn generate(r_f: usize, r_p: usize) -> (Vec<Vector<F, T>>, MDSMatrix<F, T, RATE>) {
+    pub(crate) fn generate(r_f: usize, r_p: usize) -> (Vec<[F; T]>, MDSMatrix<F, T, RATE>) {
         assert!(T > 1 && T == RATE + 1);
 
         // Support only prime field construction
@@ -46,19 +45,19 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Grain<F, T, RATE> {
         let number_of_rounds = r_p as usize + r_f as usize;
         let constants = (0..number_of_rounds)
             .map(|_| {
-                let mut round_constants = Vector::default();
-                for c in round_constants.0.iter_mut() {
+                let mut round_constants = [F::zero(); T];
+                for c in round_constants.iter_mut() {
                     *c = grain.next_field_element();
                 }
                 round_constants
             })
-            .collect::<Vec<Vector<F, T>>>();
+            .collect::<Vec<[F; T]>>();
 
-        let (mut xs, mut ys) = (Vector::default(), Vector::default());
-        for x in xs.0.iter_mut() {
+        let (mut xs, mut ys) = ([F::zero(); T], [F::zero(); T]);
+        for x in xs.iter_mut() {
             *x = grain.next_field_element_without_rejection();
         }
-        for y in ys.0.iter_mut() {
+        for y in ys.iter_mut() {
             *y = grain.next_field_element_without_rejection();
         }
 

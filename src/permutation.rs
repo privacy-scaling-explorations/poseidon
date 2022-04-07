@@ -101,7 +101,7 @@ mod tests {
                             (0..T)
                                 .map(|_| Fr::random(&mut rng))
                                 .collect::<Vec<Fr>>()
-                                .into(),
+                                .try_into().unwrap(),
                         );
                         let spec = SpecRef::<Fr, T, RATE>::new(R_F, R_P);
                         let mut state_expected = state.clone();
@@ -146,7 +146,8 @@ mod tests {
                     .into_iter()
                     .map(Fr::from)
                     .collect::<Vec<Fr>>()
-                    .into(),
+                    .try_into()
+                    .unwrap(),
             );
 
             let spec_ref = SpecRef::<Fr, T, RATE>::new(R_F, R_P);
@@ -181,7 +182,8 @@ mod tests {
                     .into_iter()
                     .map(Fr::from)
                     .collect::<Vec<Fr>>()
-                    .into(),
+                    .try_into()
+                    .unwrap(),
             );
 
             let spec_ref = SpecRef::<Fr, T, RATE>::new(R_F, R_P);
