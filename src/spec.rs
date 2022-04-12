@@ -12,7 +12,6 @@ impl<F: FieldExt, const T: usize> Default for State<F, T> {
     /// The capacity value is 2**64 + (o − 1) where o the output length.
     fn default() -> Self {
         let mut state = [F::zero(); T];
-        // TODO/FIX: should capacity value placed in 0th element or (t-1)th element
         state[0] = F::from_u128(1 << 64);
         State(state)
     }
