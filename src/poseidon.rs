@@ -63,7 +63,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Poseidon<F, T, RATE> {
         }
     }
 
-    /// Flushes absorbation line and returns the result
+    /// Flushes absorption line and returns the result
     fn finalize(&mut self) -> F {
         self.absorbing.clear();
         self.state.result()

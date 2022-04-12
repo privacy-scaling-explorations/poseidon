@@ -1,7 +1,7 @@
 //! Most of these operations here are not suitable for general purpose matrix
 //! operations. Besides vector multiplication other operations are presented
-//! with the intention of construction of parameters and are not used actual
-//! permutation process.
+//! with the intention of construction of parameters and are not used in the
+//! actual permutation process.
 
 use pairing::arithmetic::FieldExt;
 
