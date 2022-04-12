@@ -8,3 +8,31 @@
 * [matter-labs/rescue-poseidon](https://github.com/matter-labs/rescue-poseidon)
 * [zcash/halo2/halo2_gadgets](https://github.com/zcash/halo2/tree/main/halo2_gadgets)
 * [dusk-network/Poseidon252](https://github.com/dusk-network/Poseidon252)
+
+## Example usage
+
+```rust
+// Initialize a mutable hasher with constant capacity parameters 
+// and number of rounds arguments. This will also generate matrices 
+// and constants according to the specification
+let mut hasher = Poseidon::<Fr, T, RATE>::new(number_of_full_rounds, number_of_half_rounds);
+
+// In sake of the example we generate some dummy scalar inputs
+let inputs = (0..number_of_inputs_0)
+    .map(|_| Fr::random(&mut rng))
+    .collect::<Vec<Fr>>();
+
+// Feed inputs to the Absorption line
+hasher.update(&inputs[..]);
+
+// Yield your challange with squeeze function
+let challenge_alpha = hasher.squeeze();
+
+// Then again ...
+let inputs = (0..number_of_inputs_1)
+    .map(|_| Fr::random(&mut rng))
+    .collect::<Vec<Fr>>();
+hasher.update(&inputs[..]);
+let challenge_beta = hasher.squeeze();
+
+```
