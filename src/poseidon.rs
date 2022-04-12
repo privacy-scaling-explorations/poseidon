@@ -45,7 +45,6 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Poseidon<F, T, RATE> {
             self.permute();
         }
 
-        // TODO/FIX: can we avoid this in the on going transcript squeezing context?
         self.finalize_padding(padding_offset == 0);
         self.finalize()
     }
