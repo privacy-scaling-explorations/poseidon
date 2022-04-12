@@ -51,7 +51,7 @@ impl<F: FieldExt, const T: usize> State<F, T> {
     }
 
     /// Copies elements of the state
-    pub(crate) fn words(&self) -> [F; T] {
+    pub fn words(&self) -> [F; T] {
         self.0
     }
 
@@ -67,9 +67,21 @@ impl<F: FieldExt, const T: usize> State<F, T> {
 /// constants.
 #[derive(Debug, Clone)]
 pub struct Spec<F: FieldExt, const T: usize, const RATE: usize> {
-    pub r_f: usize,
-    pub mds_matrices: MDSMatrices<F, T, RATE>,
-    pub constants: OptimizedConstants<F, T>,
+    pub(crate) r_f: usize,
+    pub(crate) mds_matrices: MDSMatrices<F, T, RATE>,
+    pub(crate) constants: OptimizedConstants<F, T>,
+}
+
+impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
+    pub fn r_f(&self) -> usize {
+        self.r_f.clone()
+    }
+    pub fn mds_matrices(&self) -> MDSMatrices<F, T, RATE> {
+        self.mds_matrices.clone()
+    }
+    pub fn constants(&self) -> OptimizedConstants<F, T> {
+        self.constants.clone()
+    }
 }
 
 /// `OptimizedConstants` has round constants that are added each round. While
@@ -77,9 +89,26 @@ pub struct Spec<F: FieldExt, const T: usize, const RATE: usize> {
 /// partial round
 #[derive(Debug, Clone)]
 pub struct OptimizedConstants<F: FieldExt, const T: usize> {
-    pub start: Vec<[F; T]>,
-    pub partial: Vec<F>,
-    pub end: Vec<[F; T]>,
+    pub(crate) start: Vec<[F; T]>,
+    pub(crate) partial: Vec<F>,
+    pub(crate) end: Vec<[F; T]>,
+}
+
+impl<F: FieldExt, const T: usize> OptimizedConstants<F, T> {
+    /// Returns rounds constants for first part of full rounds
+    pub fn start(&self) -> Vec<[F; T]> {
+        self.start.clone()
+    }
+
+    /// Returns rounds constants for partial rounds
+    pub fn partial(&self) -> Vec<F> {
+        self.partial.clone()
+    }
+
+    /// Returns rounds constants for second part of full rounds
+    pub fn end(&self) -> Vec<[F; T]> {
+        self.end.clone()
+    }
 }
 
 /// `MDSMatrices` holds the MDS matrix as well as transition matrix which is
@@ -87,9 +116,26 @@ pub struct OptimizedConstants<F: FieldExt, const T: usize> {
 /// number of multiplications in apply MDS step
 #[derive(Debug, Clone)]
 pub struct MDSMatrices<F: FieldExt, const T: usize, const RATE: usize> {
-    pub mds: MDSMatrix<F, T, RATE>,
-    pub pre_sparse_mds: MDSMatrix<F, T, RATE>,
-    pub sparse_matrices: Vec<SparseMDSMatrix<F, T, RATE>>,
+    pub(crate) mds: MDSMatrix<F, T, RATE>,
+    pub(crate) pre_sparse_mds: MDSMatrix<F, T, RATE>,
+    pub(crate) sparse_matrices: Vec<SparseMDSMatrix<F, T, RATE>>,
+}
+
+impl<F: FieldExt, const T: usize, const RATE: usize> MDSMatrices<F, T, RATE> {
+    // Returns original MDS matrix
+    pub fn mds(&self) -> MDSMatrix<F, T, RATE> {
+        self.mds.clone()
+    }
+
+    // Returns transition matrix for sparse trick
+    pub fn pre_sparse_mds(&self) -> MDSMatrix<F, T, RATE> {
+        self.pre_sparse_mds.clone()
+    }
+
+    // Returns sparse matrices for partial rounds
+    pub fn sparse_matrices(&self) -> Vec<SparseMDSMatrix<F, T, RATE>> {
+        self.sparse_matrices.clone()
+    }
 }
 
 /// `MDSMatrix` is applied to `State` to achive linear layer of Poseidon
@@ -178,6 +224,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> MDSMatrix<F, T, RATE> {
         (prime(m_hat), prime_prime(w_hat).transpose().into())
     }
 
+    /// Returns rows of the MDS matrix
     pub fn rows(&self) -> [[F; T]; T] {
         self.0 .0
     }
@@ -187,11 +234,21 @@ impl<F: FieldExt, const T: usize, const RATE: usize> MDSMatrix<F, T, RATE> {
 /// layer of partial rounds instead of the original MDS
 #[derive(Debug, Clone)]
 pub struct SparseMDSMatrix<F: FieldExt, const T: usize, const RATE: usize> {
-    pub row: [F; T],
-    pub col_hat: [F; RATE],
+    pub(crate) row: [F; T],
+    pub(crate) col_hat: [F; RATE],
 }
 
 impl<F: FieldExt, const T: usize, const RATE: usize> SparseMDSMatrix<F, T, RATE> {
+    // Returns the first row
+    pub fn row(&self) -> [F; T] {
+        self.row.clone()
+    }
+
+    // Returns the first column without first element in the first row
+    pub fn col_hat(&self) -> [F; RATE] {
+        self.col_hat.clone()
+    }
+
     /// Applies the sparse MDS matrix to the state
     pub(crate) fn apply(&self, state: &mut State<F, T>) {
         let words = state.words();

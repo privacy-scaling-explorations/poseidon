@@ -21,7 +21,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
 
         // Partial rounds
         {
-            for (round_constant, sparse_mds) in (self)
+            for (round_constant, sparse_mds) in self
                 .constants
                 .partial
                 .iter()
