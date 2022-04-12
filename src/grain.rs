@@ -22,6 +22,10 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Grain<F, T, RATE> {
         assert_eq!((field_size as f32 / 8.0).ceil() as usize, n_bytes);
         assert_eq!(r_f % 2, 0);
 
+        // Pseudo random number generation. See:
+        // Initialization of the Grain LFSR Used for Parameter Generation
+        // Supplementary Material Section F
+        // https://eprint.iacr.org/2019/458.pdf
         let mut bit_sequence: Vec<bool> = Vec::new();
         append_bits(&mut bit_sequence, 2, FIELD_TYPE);
         append_bits(&mut bit_sequence, 4, SBOX_TYPE);
