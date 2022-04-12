@@ -82,7 +82,7 @@ mod tests {
     #[test]
     fn cross_test() {
         use pairing::bn256::Fr;
-
+        use rand_core::OsRng;
         use std::time::Instant;
 
         macro_rules! run_test {
@@ -95,11 +95,9 @@ mod tests {
                         const R_P: usize = $RP;
                         const T: usize = $T;
                         const RATE: usize = $RATE;
-                        use rand::thread_rng;
-                        let mut rng = thread_rng();
                         let mut state = State(
                             (0..T)
-                                .map(|_| Fr::random(&mut rng))
+                                .map(|_| Fr::random(OsRng))
                                 .collect::<Vec<Fr>>()
                                 .try_into().unwrap(),
                         );

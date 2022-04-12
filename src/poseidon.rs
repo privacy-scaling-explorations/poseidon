@@ -78,8 +78,8 @@ fn test_padding() {
     const R_P: usize = 57;
     const T: usize = 5;
     const RATE: usize = 4;
-    use rand::thread_rng;
-    let mut rng = thread_rng();
+
+    use rand_core::OsRng;
 
     // w/o extra permutation
     {
@@ -87,7 +87,7 @@ fn test_padding() {
         let number_of_permutation = 5;
         let number_of_inputs = RATE * number_of_permutation - 1;
         let inputs = (0..number_of_inputs)
-            .map(|_| Fr::random(&mut rng))
+            .map(|_| Fr::random(OsRng))
             .collect::<Vec<Fr>>();
         poseidon.update(&inputs[..]);
         let result_0 = poseidon.squeeze();
@@ -114,7 +114,7 @@ fn test_padding() {
         let number_of_permutation = 5;
         let number_of_inputs = RATE * number_of_permutation;
         let inputs = (0..number_of_inputs)
-            .map(|_| Fr::random(&mut rng))
+            .map(|_| Fr::random(OsRng))
             .collect::<Vec<Fr>>();
         poseidon.update(&inputs[..]);
         let result_0 = poseidon.squeeze();

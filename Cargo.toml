@@ -6,7 +6,6 @@ edition = "2021"
 
 [dependencies]
 pairing = { git = 'https://github.com/appliedzkp/pairing', package = "pairing_bn256" }
-rand = "0.8"
 group = "0.11"
 subtle = { version = "2.3", default-features = false }
 
