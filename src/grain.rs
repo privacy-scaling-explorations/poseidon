@@ -10,7 +10,7 @@ pub(super) struct Grain<F: FieldExt, const T: usize, const RATE: usize> {
 
 impl<F: FieldExt, const T: usize, const RATE: usize> Grain<F, T, RATE> {
     pub(crate) fn generate(r_f: usize, r_p: usize) -> (Vec<[F; T]>, MDSMatrix<F, T, RATE>) {
-        assert!(T > 1 && T == RATE + 1);
+        debug_assert!(T > 1 && T == RATE + 1);
 
         // Support only prime field construction
         const FIELD_TYPE: u8 = 1u8;
@@ -34,7 +34,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Grain<F, T, RATE> {
         append_bits(&mut bit_sequence, 10, r_f as u16);
         append_bits(&mut bit_sequence, 10, r_p as u16);
         append_bits(&mut bit_sequence, 30, 0b111111111111111111111111111111u128);
-        assert_eq!(bit_sequence.len(), 80);
+        debug_assert_eq!(bit_sequence.len(), 80);
 
         let mut grain: Grain<F, T, RATE> = Grain {
             bit_sequence,

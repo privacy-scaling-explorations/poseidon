@@ -165,7 +165,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> MDSMatrix<F, T, RATE> {
         for (i, x) in xs.iter().enumerate() {
             for (j, y) in ys.iter().enumerate() {
                 let sum = *x + *y;
-                assert!(!sum.is_zero_vartime());
+                debug_assert!(!sum.is_zero_vartime());
                 m.set(i, j, sum.invert().unwrap());
             }
         }
