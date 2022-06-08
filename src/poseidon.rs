@@ -20,51 +20,51 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Poseidon<F, T, RATE> {
         }
     }
 
-    /// Appends elements to the absorbation line
+    /// Appends elements to the absorbation line updates state while `RATE` is
+    /// full
     pub fn update(&mut self, elements: &[F]) {
-        // TODO: if `RATE` is full spawn a permutation here
-        self.absorbing.extend_from_slice(elements);
+        let mut input_elements = self.absorbing.clone();
+        input_elements.extend_from_slice(elements);
+
+        for chunk in input_elements.chunks(RATE) {
+            if chunk.len() < RATE {
+                // Must be the last iteration of this update. Feed unpermutaed inputs to the
+                // absorbation line
+                self.absorbing = chunk.to_vec();
+            } else {
+                // Add new chunk of inputs for the next permutation cycle.
+                for (input_element, state) in chunk.iter().zip(self.state.0.iter_mut().skip(1)) {
+                    state.add_assign(input_element);
+                }
+                // Perform intermediate permutation
+                self.spec.permute(&mut self.state);
+                // Flush the absorption line
+                self.absorbing.clear();
+            }
+        }
     }
 
     /// Results a single element by absorbing already added inputs
     pub fn squeeze(&mut self) -> F {
-        let mut padding_offset = 0;
-        let input_elements = self.absorbing.clone();
-        for chunk in input_elements.chunks(RATE) {
-            // `padding_offset` is expected to be in [0, RATE-1]
-            padding_offset = RATE - chunk.len();
-            let mut chunk = chunk.to_vec();
-            if padding_offset > 0 {
-                chunk.push(F::one())
-            }
+        let mut last_chunk = self.absorbing.clone();
+        {
+            // Expect padding offset to be in [0, RATE)
+            debug_assert!(last_chunk.len() < RATE);
+        }
+        // Add the finishing sign of the variable length hashing. Note that this mut
+        // also apply when absorbing line is empty
+        last_chunk.push(F::one());
+        // Add the last chunk of inputs to the state for the final permutation cycle
 
-            // Add new chunk of inputs for the next permutation cycle
-            for (input_element, state) in chunk.iter().zip(self.state.0.iter_mut().skip(1)) {
-                state.add_assign(input_element);
-            }
-            self.permute();
+        for (input_element, state) in last_chunk.iter().zip(self.state.0.iter_mut().skip(1)) {
+            state.add_assign(input_element);
         }
 
-        self.finalize_padding(padding_offset == 0);
-        self.finalize()
-    }
-
-    fn permute(&mut self) {
-        self.spec.permute(&mut self.state)
-    }
-
-    // If there is no room left for the padding sign add it to the state and
-    // perform one more permutation
-    fn finalize_padding(&mut self, must_perform: bool) {
-        if must_perform {
-            self.state.0[1].add_assign(F::one());
-            self.permute();
-        }
-    }
-
-    /// Flushes absorption line and returns the result
-    fn finalize(&mut self) -> F {
+        // Perform final permutation
+        self.spec.permute(&mut self.state);
+        // Flush the absorption line
         self.absorbing.clear();
+        // Returns the challenge while preserving internal state
         self.state.result()
     }
 }
