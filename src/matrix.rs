@@ -15,10 +15,12 @@ impl<F: FieldExt, const T: usize> Default for Matrix<F, T> {
 }
 
 impl<F: FieldExt, const T: usize> Matrix<F, T> {
+    #[inline]
     pub(crate) fn zero_matrix() -> Self {
         Self([[F::zero(); T]; T])
     }
 
+    #[inline]
     pub(crate) fn identity() -> Self {
         let mut m = Self::zero_matrix();
         for i in 0..T {
@@ -123,6 +125,7 @@ impl<F: FieldExt, const T: usize> Matrix<F, T> {
         res
     }
 
+    #[inline]
     pub(crate) fn w<const RATE: usize>(&self) -> [F; RATE] {
         assert_eq!(RATE + 1, T);
         self.0
@@ -134,6 +137,7 @@ impl<F: FieldExt, const T: usize> Matrix<F, T> {
             .unwrap()
     }
 
+    #[inline]
     pub(crate) fn sub<const RATE: usize>(&self) -> Matrix<F, RATE> {
         assert_eq!(RATE + 1, T);
         Matrix::<F, RATE>::from_vec(self.0.iter().skip(1).map(|row| row[1..].to_vec()).collect())

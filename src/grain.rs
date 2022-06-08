@@ -128,6 +128,8 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Grain<F, T, RATE> {
     }
 
     fn new_bit(&mut self) -> bool {
+        // See supplementary material Section F. Step 2.
+        // https://eprint.iacr.org/2019/458.pdf
         let new_bit = vec![62, 51, 38, 23, 13usize]
             .iter()
             .fold(self.bit_sequence[0], |acc, pos| {

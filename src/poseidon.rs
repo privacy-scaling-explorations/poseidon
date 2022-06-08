@@ -20,7 +20,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Poseidon<F, T, RATE> {
         }
     }
 
-    /// Appends elements to the absorbation line updates state while `RATE` is
+    /// Appends elements to the absorption line updates state while `RATE` is
     /// full
     pub fn update(&mut self, elements: &[F]) {
         let mut input_elements = self.absorbing.clone();
