@@ -1,13 +1,13 @@
 [package]
 name = "poseidon"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["kilic <kiliconu@itu.edu.tr>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-pairing = { git = 'https://github.com/appliedzkp/pairing', package = "pairing_bn256" }
-group = "0.11"
+halo2curves = { git = 'https://github.com/privacy-scaling-explorations/halo2curves', tag = 'v2022_06_08' }
+group = "0.12.0"
 subtle = { version = "2.3", default-features = false }
 
 [dev-dependencies]

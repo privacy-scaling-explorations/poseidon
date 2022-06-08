@@ -1,5 +1,5 @@
 use crate::spec::{Spec, State};
-use pairing::arithmetic::FieldExt;
+use halo2curves::FieldExt;
 
 impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
     /// Applies the Poseidon permutation to the given state
@@ -50,8 +50,9 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
 mod tests {
     use super::State;
     use crate::spec::{tests::SpecRef, Spec};
-    use group::ff::{Field, PrimeField};
-    use pairing::arithmetic::FieldExt;
+    use group::ff::PrimeField;
+    use halo2curves::bn256::Fr;
+    use halo2curves::FieldExt;
 
     /// We want to keep unoptimized poseidion construction and permutation to
     /// cross test with optimized one
@@ -81,7 +82,7 @@ mod tests {
 
     #[test]
     fn cross_test() {
-        use pairing::bn256::Fr;
+        use halo2curves::group::ff::Field;
         use rand_core::OsRng;
         use std::time::Instant;
 
@@ -129,8 +130,6 @@ mod tests {
 
     #[test]
     fn test_against_test_vectors() {
-        use pairing::bn256::Fr;
-
         // https://extgit.iaik.tugraz.at/krypto/hadeshash/-/blob/master/code/test_vectors.txt
         // poseidonperm_x5_254_3
         {
