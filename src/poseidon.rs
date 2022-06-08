@@ -137,4 +137,51 @@ fn test_padding() {
 
         assert_eq!(result_0, result_1);
     }
+
+    // Much generic comparision
+    fn run<const T: usize, const RATE: usize>() {
+        for number_of_iters in 1..25 {
+            let mut poseidon = Poseidon::<Fr, T, RATE>::new(R_F, R_P);
+
+            let mut inputs = vec![];
+            for number_of_inputs in 0..=number_of_iters {
+                let chunk = (0..number_of_inputs)
+                    .map(|_| Fr::random(OsRng))
+                    .collect::<Vec<Fr>>();
+                poseidon.update(&chunk[..]);
+                inputs.extend(chunk);
+            }
+            let result_0 = poseidon.squeeze();
+
+            // Accept below as reference and check consistency
+            inputs.push(Fr::one());
+            let offset = inputs.len() % RATE;
+            if offset != 0 {
+                inputs.extend(vec![Fr::zero(); RATE - offset]);
+            }
+
+            let spec = poseidon.spec.clone();
+            let mut state = State::<Fr, T>::default();
+            for chunk in inputs.chunks(RATE) {
+                // First element is zero
+                let mut round_inputs = vec![Fr::zero()];
+                // Round inputs must be T sized now
+                round_inputs.extend_from_slice(chunk);
+
+                state.add_constants(&round_inputs.try_into().unwrap());
+                spec.permute(&mut state)
+            }
+            let result_1 = state.result();
+            assert_eq!(result_0, result_1);
+        }
+    }
+
+    run::<3, 2>();
+    run::<4, 3>();
+    run::<5, 4>();
+    run::<6, 5>();
+    run::<7, 6>();
+    run::<8, 7>();
+    run::<9, 8>();
+    run::<10, 9>();
 }
