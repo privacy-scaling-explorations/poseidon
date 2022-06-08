@@ -1,3 +1,9 @@
+//! Poseidon hashing implemention with variable lenght input setting. This crate
+//! also exposes constant parameters for circuit implementations
+
+#![deny(missing_debug_implementations)]
+#![deny(missing_docs)]
+
 mod grain;
 mod matrix;
 mod permutation;

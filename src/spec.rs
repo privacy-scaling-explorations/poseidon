@@ -73,14 +73,17 @@ pub struct Spec<F: FieldExt, const T: usize, const RATE: usize> {
 }
 
 impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
+    /// Number of full rounds
     pub fn r_f(&self) -> usize {
         self.r_f.clone()
     }
-    pub fn mds_matrices(&self) -> MDSMatrices<F, T, RATE> {
-        self.mds_matrices.clone()
+    /// Set of MDS Matrices used in permutation line
+    pub fn mds_matrices(&self) -> &MDSMatrices<F, T, RATE> {
+        &self.mds_matrices
     }
-    pub fn constants(&self) -> OptimizedConstants<F, T> {
-        self.constants.clone()
+    /// Optimised round constants
+    pub fn constants(&self) -> &OptimizedConstants<F, T> {
+        &self.constants
     }
 }
 
@@ -96,18 +99,18 @@ pub struct OptimizedConstants<F: FieldExt, const T: usize> {
 
 impl<F: FieldExt, const T: usize> OptimizedConstants<F, T> {
     /// Returns rounds constants for first part of full rounds
-    pub fn start(&self) -> Vec<[F; T]> {
-        self.start.clone()
+    pub fn start(&self) -> &Vec<[F; T]> {
+        &self.start
     }
 
     /// Returns rounds constants for partial rounds
-    pub fn partial(&self) -> Vec<F> {
-        self.partial.clone()
+    pub fn partial(&self) -> &Vec<F> {
+        &self.partial
     }
 
     /// Returns rounds constants for second part of full rounds
-    pub fn end(&self) -> Vec<[F; T]> {
-        self.end.clone()
+    pub fn end(&self) -> &Vec<[F; T]> {
+        &self.end
     }
 }
 
@@ -122,19 +125,19 @@ pub struct MDSMatrices<F: FieldExt, const T: usize, const RATE: usize> {
 }
 
 impl<F: FieldExt, const T: usize, const RATE: usize> MDSMatrices<F, T, RATE> {
-    // Returns original MDS matrix
-    pub fn mds(&self) -> MDSMatrix<F, T, RATE> {
-        self.mds.clone()
+    /// Returns original MDS matrix
+    pub fn mds(&self) -> &MDSMatrix<F, T, RATE> {
+        &self.mds
     }
 
-    // Returns transition matrix for sparse trick
-    pub fn pre_sparse_mds(&self) -> MDSMatrix<F, T, RATE> {
-        self.pre_sparse_mds.clone()
+    /// Returns transition matrix for sparse trick
+    pub fn pre_sparse_mds(&self) -> &MDSMatrix<F, T, RATE> {
+        &self.pre_sparse_mds
     }
 
-    // Returns sparse matrices for partial rounds
-    pub fn sparse_matrices(&self) -> Vec<SparseMDSMatrix<F, T, RATE>> {
-        self.sparse_matrices.clone()
+    /// Returns sparse matrices for partial rounds
+    pub fn sparse_matrices(&self) -> &Vec<SparseMDSMatrix<F, T, RATE>> {
+        &self.sparse_matrices
     }
 }
 
@@ -239,14 +242,14 @@ pub struct SparseMDSMatrix<F: FieldExt, const T: usize, const RATE: usize> {
 }
 
 impl<F: FieldExt, const T: usize, const RATE: usize> SparseMDSMatrix<F, T, RATE> {
-    // Returns the first row
-    pub fn row(&self) -> [F; T] {
-        self.row.clone()
+    /// Returns the first row
+    pub fn row(&self) -> &[F; T] {
+        &self.row
     }
 
-    // Returns the first column without first element in the first row
-    pub fn col_hat(&self) -> [F; RATE] {
-        self.col_hat.clone()
+    /// Returns the first column without first element in the first row
+    pub fn col_hat(&self) -> &[F; RATE] {
+        &self.col_hat
     }
 
     /// Applies the sparse MDS matrix to the state
