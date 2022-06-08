@@ -3,6 +3,7 @@ name = "poseidon"
 version = "0.1.0"
 authors = ["kilic <kiliconu@itu.edu.tr>"]
 edition = "2021"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 pairing = { git = 'https://github.com/appliedzkp/pairing', package = "pairing_bn256" }
