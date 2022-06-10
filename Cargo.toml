@@ -1,0 +1,14 @@
+[package]
+name = "poseidon"
+version = "0.2.0"
+authors = ["kilic <kiliconu@itu.edu.tr>"]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+halo2curves = { git = 'https://github.com/privacy-scaling-explorations/halo2curves', tag = 'v0.2.0' }
+group = "0.12.0"
+subtle = { version = "2.3", default-features = false }
+
+[dev-dependencies]
+rand_core = { version = "0.6", default-features = false }
