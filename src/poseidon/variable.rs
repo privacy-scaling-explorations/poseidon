@@ -15,7 +15,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Poseidon<F, T, RATE> {
     pub fn new(r_f: usize, r_p: usize) -> Self {
         Self {
             spec: Spec::new(r_f, r_p),
-            state: State::<F, T>::variable_input_length(),
+            state: State::<F, T>::init_variable_length_mode(),
             absorbing: Vec::new(),
         }
     }
@@ -96,7 +96,7 @@ fn test_padding() {
         let mut inputs = inputs.clone();
         inputs.push(Fr::one());
         assert!(inputs.len() % RATE == 0);
-        let mut state = State::<Fr, T>::variable_input_length();
+        let mut state = State::<Fr, T>::init_variable_length_mode();
         for chunk in inputs.chunks(RATE) {
             let mut inputs = vec![Fr::zero()];
             inputs.extend_from_slice(chunk);
@@ -126,7 +126,7 @@ fn test_padding() {
         inputs.extend(extra_padding);
 
         assert!(inputs.len() % RATE == 0);
-        let mut state = State::<Fr, T>::variable_input_length();
+        let mut state = State::<Fr, T>::init_variable_length_mode();
         for chunk in inputs.chunks(RATE) {
             let mut inputs = vec![Fr::zero()];
             inputs.extend_from_slice(chunk);
@@ -161,7 +161,7 @@ fn test_padding() {
             }
 
             let spec = poseidon.spec.clone();
-            let mut state = State::<Fr, T>::variable_input_length();
+            let mut state = State::<Fr, T>::init_variable_length_mode();
             for chunk in inputs.chunks(RATE) {
                 // First element is zero
                 let mut round_inputs = vec![Fr::zero()];

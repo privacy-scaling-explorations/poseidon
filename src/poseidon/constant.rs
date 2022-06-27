@@ -17,7 +17,7 @@ impl<F: FieldExt, const LEN: usize, const T: usize, const RATE: usize> Poseidon<
 
     /// Perform hashing
     pub fn hash(&self, elements: &[F; LEN]) -> F {
-        let mut state = State::<F, T>::constant_input_length();
+        let mut state = State::<F, T>::init_constant_length_mode();
 
         for chunk in elements.chunks(RATE) {
             // If chunk size is less than RATE pad with 0:

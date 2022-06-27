@@ -11,7 +11,7 @@ pub struct State<F: FieldExt, const T: usize>(pub(crate) [F; T]);
 impl<F: FieldExt, const T: usize> State<F, T> {
     /// The capacity value is $2^64 + (o − 1)$ where o the output length.
     /// Currently only `o = 1` is supported
-    pub(crate) fn variable_input_length() -> Self {
+    pub fn init_variable_length_mode() -> Self {
         let mut state = [F::zero(); T];
         state[0] = F::from_u128(1 << 64);
         State(state)
@@ -19,14 +19,14 @@ impl<F: FieldExt, const T: usize> State<F, T> {
 
     /// The capacity value is $2^64 + (o − 1)$ where o the output length.
     /// Currently only `o = 1` is supported
-    pub(crate) fn constant_input_length() -> Self {
+    pub fn init_constant_length_mode() -> Self {
         let mut state = [F::zero(); T];
         state[0] = F::from_u128(1 << 64);
         State(state)
     }
 
     /// The capacity value is $2^{arity}$
-    pub(crate) fn merkle() -> Self {
+    pub fn init_merkle_mode() -> Self {
         let mut state = [F::zero(); T];
         state[0] = F::from_u128(1 << (T - 1));
         State(state)
@@ -363,10 +363,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
             *optimized = tmp[0];
 
             tmp[0] = F::zero();
-            for ((acc, tmp), constant) in acc
-                .iter_mut()
-                .zip(tmp.into_iter())
-                .zip(constants.iter())
+            for ((acc, tmp), constant) in acc.iter_mut().zip(tmp.into_iter()).zip(constants.iter())
             {
                 *acc = tmp + constant
             }

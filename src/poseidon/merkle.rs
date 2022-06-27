@@ -17,7 +17,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Poseidon<F, T, RATE> {
 
     /// Perform hashing
     pub fn hash(&self, elements: &[F; RATE]) -> F {
-        let mut state = State::<F, T>::merkle();
+        let mut state = State::<F, T>::init_merkle_mode();
         for (input_element, state) in elements.iter().zip(state.0.iter_mut().skip(1)) {
             state.add_assign(input_element);
         }
