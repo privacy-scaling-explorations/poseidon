@@ -8,16 +8,30 @@ use halo2curves::FieldExt;
 #[derive(Clone, Debug, PartialEq)]
 pub struct State<F: FieldExt, const T: usize>(pub(crate) [F; T]);
 
-impl<F: FieldExt, const T: usize> Default for State<F, T> {
-    /// The capacity value is 2**64 + (o − 1) where o the output length.
-    fn default() -> Self {
+impl<F: FieldExt, const T: usize> State<F, T> {
+    /// The capacity value is $2^64 + (o − 1)$ where o the output length.
+    /// Currently only `o = 1` is supported
+    pub(crate) fn variable_input_length() -> Self {
         let mut state = [F::zero(); T];
         state[0] = F::from_u128(1 << 64);
         State(state)
     }
-}
 
-impl<F: FieldExt, const T: usize> State<F, T> {
+    /// The capacity value is $2^64 + (o − 1)$ where o the output length.
+    /// Currently only `o = 1` is supported
+    pub(crate) fn constant_input_length() -> Self {
+        let mut state = [F::zero(); T];
+        state[0] = F::from_u128(1 << 64);
+        State(state)
+    }
+
+    /// The capacity value is $2^{arity}$
+    pub(crate) fn merkle() -> Self {
+        let mut state = [F::zero(); T];
+        state[0] = F::from_u128(1 << (T - 1));
+        State(state)
+    }
+
     /// Applies sbox for all elements of the state.
     /// Only supports `alpha = 5` sbox case.
     pub(crate) fn sbox_full(&mut self) {
@@ -75,7 +89,7 @@ pub struct Spec<F: FieldExt, const T: usize, const RATE: usize> {
 impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
     /// Number of full rounds
     pub fn r_f(&self) -> usize {
-        self.r_f.clone()
+        self.r_f
     }
     /// Set of MDS Matrices used in permutation line
     pub fn mds_matrices(&self) -> &MDSMatrices<F, T, RATE> {
@@ -328,7 +342,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
 
         // Calculate optimized constants for first half of the full rounds
         let mut constants_start: Vec<[F; T]> = vec![[F::zero(); T]; r_f_half];
-        constants_start[0] = constants[0].clone();
+        constants_start[0] = constants[0];
         for (optimized, constants) in constants_start
             .iter_mut()
             .skip(1)
@@ -352,7 +366,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
             for ((acc, tmp), constant) in acc
                 .iter_mut()
                 .zip(tmp.into_iter())
-                .zip(constants.into_iter())
+                .zip(constants.iter())
             {
                 *acc = tmp + constant
             }
