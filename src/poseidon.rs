@@ -69,26 +69,31 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Poseidon<F, T, RATE> {
     }
 }
 
-#[test]
-fn test_padding() {
+#[cfg(test)]
+mod tests {
+    use crate::{Poseidon, State};
     use group::ff::Field;
     use halo2curves::bn256::Fr;
+    use paste::paste;
+    use rand_core::OsRng;
+
 
     const R_F: usize = 8;
     const R_P: usize = 57;
     const T: usize = 5;
     const RATE: usize = 4;
+    
+    fn gen_random_vec(len: usize) -> Vec<Fr> {
+        (0..len).map(|_| Fr::random(OsRng)).collect::<Vec<Fr>>()
+    }
 
-    use rand_core::OsRng;
-
-    // w/o extra permutation
-    {
+    #[test]
+    fn poseidon_padding_with_last_chunk_len_is_not_rate_multiples() {
         let mut poseidon = Poseidon::<Fr, T, RATE>::new(R_F, R_P);
         let number_of_permutation = 5;
         let number_of_inputs = RATE * number_of_permutation - 1;
-        let inputs = (0..number_of_inputs)
-            .map(|_| Fr::random(OsRng))
-            .collect::<Vec<Fr>>();
+        let inputs = gen_random_vec(number_of_inputs);
+
         poseidon.update(&inputs[..]);
         let result_0 = poseidon.squeeze();
 
@@ -108,8 +113,8 @@ fn test_padding() {
         assert_eq!(result_0, result_1);
     }
 
-    // w/ extra permutation
-    {
+    #[test]
+    fn poseidon_padding_with_last_chunk_len_is_rate_multiples() {
         let mut poseidon = Poseidon::<Fr, T, RATE>::new(R_F, R_P);
         let number_of_permutation = 5;
         let number_of_inputs = RATE * number_of_permutation;
@@ -138,50 +143,56 @@ fn test_padding() {
         assert_eq!(result_0, result_1);
     }
 
-    // Much generic comparision
-    fn run<const T: usize, const RATE: usize>() {
-        for number_of_iters in 1..25 {
-            let mut poseidon = Poseidon::<Fr, T, RATE>::new(R_F, R_P);
+    macro_rules! test_padding {
+        ($T:expr, $RATE:expr) => {
+            paste! {
+                #[test]
+                fn [<test_padding_ $T _ $RATE>]() {
+                    for number_of_iters in 1..25 {
+                        let mut poseidon = Poseidon::<Fr, $T, $RATE>::new(R_F, R_P);
 
-            let mut inputs = vec![];
-            for number_of_inputs in 0..=number_of_iters {
-                let chunk = (0..number_of_inputs)
-                    .map(|_| Fr::random(OsRng))
-                    .collect::<Vec<Fr>>();
-                poseidon.update(&chunk[..]);
-                inputs.extend(chunk);
+                        let mut inputs = vec![];
+                        for number_of_inputs in 0..=number_of_iters {
+                            let chunk = (0..number_of_inputs)
+                                .map(|_| Fr::random(OsRng))
+                                .collect::<Vec<Fr>>();
+                            poseidon.update(&chunk[..]);
+                            inputs.extend(chunk);
+                        }
+                        let result_0 = poseidon.squeeze();
+
+                        // Accept below as reference and check consistency
+                        inputs.push(Fr::one());
+                        let offset = inputs.len() % $RATE;
+                        if offset != 0 {
+                            inputs.extend(vec![Fr::zero(); $RATE - offset]);
+                        }
+
+                        let spec = poseidon.spec.clone();
+                        let mut state = State::<Fr, $T>::default();
+                        for chunk in inputs.chunks($RATE) {
+                            // First element is zero
+                            let mut round_inputs = vec![Fr::zero()];
+                            // Round inputs must be T sized now
+                            round_inputs.extend_from_slice(chunk);
+
+                            state.add_constants(&round_inputs.try_into().unwrap());
+                            spec.permute(&mut state)
+                        }
+                        let result_1 = state.result();
+                        assert_eq!(result_0, result_1);
+                    }
+                }
             }
-            let result_0 = poseidon.squeeze();
-
-            // Accept below as reference and check consistency
-            inputs.push(Fr::one());
-            let offset = inputs.len() % RATE;
-            if offset != 0 {
-                inputs.extend(vec![Fr::zero(); RATE - offset]);
-            }
-
-            let spec = poseidon.spec.clone();
-            let mut state = State::<Fr, T>::default();
-            for chunk in inputs.chunks(RATE) {
-                // First element is zero
-                let mut round_inputs = vec![Fr::zero()];
-                // Round inputs must be T sized now
-                round_inputs.extend_from_slice(chunk);
-
-                state.add_constants(&round_inputs.try_into().unwrap());
-                spec.permute(&mut state)
-            }
-            let result_1 = state.result();
-            assert_eq!(result_0, result_1);
-        }
+        };
     }
 
-    run::<3, 2>();
-    run::<4, 3>();
-    run::<5, 4>();
-    run::<6, 5>();
-    run::<7, 6>();
-    run::<8, 7>();
-    run::<9, 8>();
-    run::<10, 9>();
+    test_padding!(3, 2);
+    test_padding!(4, 3);
+    test_padding!(5, 4);
+    test_padding!(6, 5);
+    test_padding!(7, 6);
+    test_padding!(8, 7);
+    test_padding!(9, 8);
+    test_padding!(10, 9);
 }
