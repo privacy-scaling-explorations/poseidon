@@ -1,16 +1,20 @@
+use group::ff::{FromUniformBytes, PrimeField};
+use halo2curves::serde::SerdeObject;
+
 use crate::{Spec, State};
-use halo2curves::FieldExt;
 
 /// Poseidon hasher that maintains state and inputs and yields single element
 /// output when desired
 #[derive(Debug, Clone)]
-pub struct Poseidon<F: FieldExt, const T: usize, const RATE: usize> {
+pub struct Poseidon<F: PrimeField, const T: usize, const RATE: usize> {
     state: State<F, T>,
     spec: Spec<F, T, RATE>,
     absorbing: Vec<F>,
 }
 
-impl<F: FieldExt, const T: usize, const RATE: usize> Poseidon<F, T, RATE> {
+impl<F: PrimeField + SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize>
+    Poseidon<F, T, RATE>
+{
     /// Constructs a clear state poseidon instance
     pub fn new(r_f: usize, r_p: usize) -> Self {
         Self {
@@ -53,7 +57,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Poseidon<F, T, RATE> {
         }
         // Add the finishing sign of the variable length hashing. Note that this mut
         // also apply when absorbing line is empty
-        last_chunk.push(F::one());
+        last_chunk.push(F::ONE);
         // Add the last chunk of inputs to the state for the final permutation cycle
 
         for (input_element, state) in last_chunk.iter().zip(self.state.0.iter_mut().skip(1)) {
@@ -77,12 +81,11 @@ mod tests {
     use paste::paste;
     use rand_core::OsRng;
 
-
     const R_F: usize = 8;
     const R_P: usize = 57;
     const T: usize = 5;
     const RATE: usize = 4;
-    
+
     fn gen_random_vec(len: usize) -> Vec<Fr> {
         (0..len).map(|_| Fr::random(OsRng)).collect::<Vec<Fr>>()
     }
