@@ -3,7 +3,7 @@
 //! with the intention of construction of parameters and are not used in the
 //! actual permutation process.
 
-use group::ff::PrimeField;
+use halo2curves::group::ff::PrimeField;
 
 #[derive(PartialEq, Debug, Clone)]
 pub(crate) struct Matrix<F: PrimeField, const T: usize>(pub(crate) [[F; T]; T]);

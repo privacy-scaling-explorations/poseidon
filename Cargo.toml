@@ -7,7 +7,6 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 halo2curves = { git = 'https://github.com/scroll-tech/halo2curves', branch = "halo2-ecc-snark-verifier-0220" }
-group = "0.13.0"
 subtle = { version = "2.3", default-features = false }
 
 [dev-dependencies]

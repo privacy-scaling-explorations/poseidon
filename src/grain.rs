@@ -1,4 +1,4 @@
-use group::ff::{FromUniformBytes, PrimeField};
+use halo2curves::group::ff::{FromUniformBytes, PrimeField};
 use halo2curves::serde::SerdeObject;
 
 use crate::spec::MDSMatrix;

@@ -1,4 +1,4 @@
-use group::ff::{FromUniformBytes, PrimeField};
+use halo2curves::group::ff::{FromUniformBytes, PrimeField};
 use halo2curves::serde::SerdeObject;
 
 use crate::{Spec, State};
@@ -76,8 +76,8 @@ impl<F: PrimeField + SerdeObject + FromUniformBytes<64>, const T: usize, const R
 #[cfg(test)]
 mod tests {
     use crate::{Poseidon, State};
-    use group::ff::Field;
     use halo2curves::bn256::Fr;
+    use halo2curves::group::ff::Field;
     use paste::paste;
     use rand_core::OsRng;
 

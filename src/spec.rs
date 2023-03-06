@@ -1,6 +1,6 @@
 use std::ops::Index;
 
-use group::ff::{FromUniformBytes, PrimeField};
+use halo2curves::group::ff::{FromUniformBytes, PrimeField};
 use halo2curves::serde::SerdeObject;
 
 use crate::{grain::Grain, matrix::Matrix};
@@ -400,7 +400,7 @@ impl<F: PrimeField + SerdeObject + FromUniformBytes<64>, const T: usize, const R
 
 #[cfg(test)]
 pub(super) mod tests {
-    use group::ff::{FromUniformBytes, PrimeField};
+    use halo2curves::group::ff::{FromUniformBytes, PrimeField};
     use halo2curves::serde::SerdeObject;
 
     use super::MDSMatrix;
