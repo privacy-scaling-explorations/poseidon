@@ -1,4 +1,4 @@
-//! Poseidon hashing implemention with variable lenght input setting. This crate
+//! Poseidon hashing implementation with variable length input setting. This crate
 //! also exposes constant parameters for circuit implementations
 
 #![deny(missing_debug_implementations)]
