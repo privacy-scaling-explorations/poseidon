@@ -54,7 +54,7 @@ mod tests {
     use halo2curves::bn256::Fr;
     use halo2curves::group::ff::PrimeField;
 
-    /// We want to keep unoptimized poseidion construction and permutation to
+    /// We want to keep non-optimized poseidon construction and permutation to
     /// cross test with optimized one
     impl<F: PrimeField, const T: usize, const RATE: usize> SpecRef<F, T, RATE> {
         fn permute(&self, state: &mut State<F, T>) {

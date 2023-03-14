@@ -10,9 +10,7 @@ pub(super) struct Grain<F: PrimeField, const T: usize, const RATE: usize> {
     _field: PhantomData<F>,
 }
 
-impl<F: PrimeField + SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize>
-    Grain<F, T, RATE>
-{
+impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize> Grain<F, T, RATE> {
     pub(crate) fn generate(r_f: usize, r_p: usize) -> (Vec<[F; T]>, MDSMatrix<F, T, RATE>) {
         debug_assert!(T > 1 && T == RATE + 1);
 
@@ -146,7 +144,7 @@ impl<F: PrimeField + SerdeObject + FromUniformBytes<64>, const T: usize, const R
     }
 }
 
-impl<F: PrimeField + SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize> Iterator
+impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize> Iterator
     for Grain<F, T, RATE>
 {
     type Item = bool;

@@ -12,7 +12,7 @@ pub struct Poseidon<F: PrimeField, const T: usize, const RATE: usize> {
     absorbing: Vec<F>,
 }
 
-impl<F: PrimeField + SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize>
+impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize>
     Poseidon<F, T, RATE>
 {
     /// Constructs a clear state poseidon instance

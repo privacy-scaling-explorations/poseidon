@@ -298,9 +298,7 @@ impl<F: PrimeField, const T: usize, const RATE: usize> From<MDSMatrix<F, T, RATE
     }
 }
 
-impl<F: PrimeField + SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize>
-    Spec<F, T, RATE>
-{
+impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize> Spec<F, T, RATE> {
     /// Given number of round parameters constructs new Posedion instance
     /// calculating unoptimized round constants with reference `Grain` then
     /// calculates optimized constants and sparse matrices
@@ -406,7 +404,8 @@ pub(super) mod tests {
     use super::MDSMatrix;
     use crate::grain::Grain;
 
-    /// We want to keep unoptimized parameters to cross test with optimized one
+    /// We want to keep non-optimized parameters to cross test with optimized
+    /// one
     pub(crate) struct SpecRef<F: PrimeField, const T: usize, const RATE: usize> {
         pub(crate) r_f: usize,
         pub(crate) r_p: usize,
@@ -414,9 +413,7 @@ pub(super) mod tests {
         pub(crate) constants: Vec<[F; T]>,
     }
 
-    impl<F: PrimeField + SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize>
-        SpecRef<F, T, RATE>
-    {
+    impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize> SpecRef<F, T, RATE> {
         pub(crate) fn new(r_f: usize, r_p: usize) -> Self {
             let (constants, mds) = Grain::generate(r_f, r_p);
 
