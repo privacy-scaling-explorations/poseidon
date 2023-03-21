@@ -1,23 +1,25 @@
 use std::ops::Index;
 
+use halo2curves::group::ff::{FromUniformBytes, PrimeField};
+use halo2curves::serde::SerdeObject;
+
 use crate::{grain::Grain, matrix::Matrix};
-use halo2curves::FieldExt;
 
 /// `State` is structure `T` sized field elements that are subjected to
 /// permutation
 #[derive(Clone, Debug, PartialEq)]
-pub struct State<F: FieldExt, const T: usize>(pub(crate) [F; T]);
+pub struct State<F: PrimeField, const T: usize>(pub(crate) [F; T]);
 
-impl<F: FieldExt, const T: usize> Default for State<F, T> {
+impl<F: PrimeField, const T: usize> Default for State<F, T> {
     /// The capacity value is 2**64 + (o − 1) where o the output length.
     fn default() -> Self {
-        let mut state = [F::zero(); T];
+        let mut state = [F::ZERO; T];
         state[0] = F::from_u128(1 << 64);
         State(state)
     }
 }
 
-impl<F: FieldExt, const T: usize> State<F, T> {
+impl<F: PrimeField, const T: usize> State<F, T> {
     /// Applies sbox for all elements of the state.
     /// Only supports `alpha = 5` sbox case.
     pub(crate) fn sbox_full(&mut self) {
@@ -66,13 +68,13 @@ impl<F: FieldExt, const T: usize> State<F, T> {
 /// design matures. Number of partial rounds can be deriven from number of
 /// constants.
 #[derive(Debug, Clone)]
-pub struct Spec<F: FieldExt, const T: usize, const RATE: usize> {
+pub struct Spec<F: PrimeField, const T: usize, const RATE: usize> {
     pub(crate) r_f: usize,
     pub(crate) mds_matrices: MDSMatrices<F, T, RATE>,
     pub(crate) constants: OptimizedConstants<F, T>,
 }
 
-impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
+impl<F: PrimeField, const T: usize, const RATE: usize> Spec<F, T, RATE> {
     /// Number of full rounds
     pub fn r_f(&self) -> usize {
         self.r_f.clone()
@@ -91,13 +93,13 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
 /// full rounds has T sized constants there is a single constant for each
 /// partial round
 #[derive(Debug, Clone)]
-pub struct OptimizedConstants<F: FieldExt, const T: usize> {
+pub struct OptimizedConstants<F: PrimeField, const T: usize> {
     pub(crate) start: Vec<[F; T]>,
     pub(crate) partial: Vec<F>,
     pub(crate) end: Vec<[F; T]>,
 }
 
-impl<F: FieldExt, const T: usize> OptimizedConstants<F, T> {
+impl<F: PrimeField, const T: usize> OptimizedConstants<F, T> {
     /// Returns rounds constants for first part of full rounds
     pub fn start(&self) -> &Vec<[F; T]> {
         &self.start
@@ -118,13 +120,13 @@ impl<F: FieldExt, const T: usize> OptimizedConstants<F, T> {
 /// also called `pre_sparse_mds` and sparse matrices that enables us to reduce
 /// number of multiplications in apply MDS step
 #[derive(Debug, Clone)]
-pub struct MDSMatrices<F: FieldExt, const T: usize, const RATE: usize> {
+pub struct MDSMatrices<F: PrimeField, const T: usize, const RATE: usize> {
     pub(crate) mds: MDSMatrix<F, T, RATE>,
     pub(crate) pre_sparse_mds: MDSMatrix<F, T, RATE>,
     pub(crate) sparse_matrices: Vec<SparseMDSMatrix<F, T, RATE>>,
 }
 
-impl<F: FieldExt, const T: usize, const RATE: usize> MDSMatrices<F, T, RATE> {
+impl<F: PrimeField, const T: usize, const RATE: usize> MDSMatrices<F, T, RATE> {
     /// Returns original MDS matrix
     pub fn mds(&self) -> &MDSMatrix<F, T, RATE> {
         &self.mds
@@ -143,9 +145,9 @@ impl<F: FieldExt, const T: usize, const RATE: usize> MDSMatrices<F, T, RATE> {
 
 /// `MDSMatrix` is applied to `State` to achive linear layer of Poseidon
 #[derive(Clone, Debug)]
-pub struct MDSMatrix<F: FieldExt, const T: usize, const RATE: usize>(pub(crate) Matrix<F, T>);
+pub struct MDSMatrix<F: PrimeField, const T: usize, const RATE: usize>(pub(crate) Matrix<F, T>);
 
-impl<F: FieldExt, const T: usize, const RATE: usize> Index<usize> for MDSMatrix<F, T, RATE> {
+impl<F: PrimeField, const T: usize, const RATE: usize> Index<usize> for MDSMatrix<F, T, RATE> {
     type Output = [F; T];
 
     fn index(&self, idx: usize) -> &Self::Output {
@@ -153,7 +155,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Index<usize> for MDSMatrix<
     }
 }
 
-impl<F: FieldExt, const T: usize, const RATE: usize> MDSMatrix<F, T, RATE> {
+impl<F: PrimeField, const T: usize, const RATE: usize> MDSMatrix<F, T, RATE> {
     /// Applies `MDSMatrix` to the state
     pub(crate) fn apply(&self, state: &mut State<F, T>) {
         state.0 = self.0.mul_vector(&state.0);
@@ -236,12 +238,12 @@ impl<F: FieldExt, const T: usize, const RATE: usize> MDSMatrix<F, T, RATE> {
 /// `SparseMDSMatrix` are in `[row], [hat | identity]` form and used in linear
 /// layer of partial rounds instead of the original MDS
 #[derive(Debug, Clone)]
-pub struct SparseMDSMatrix<F: FieldExt, const T: usize, const RATE: usize> {
+pub struct SparseMDSMatrix<F: PrimeField, const T: usize, const RATE: usize> {
     pub(crate) row: [F; T],
     pub(crate) col_hat: [F; RATE],
 }
 
-impl<F: FieldExt, const T: usize, const RATE: usize> SparseMDSMatrix<F, T, RATE> {
+impl<F: PrimeField, const T: usize, const RATE: usize> SparseMDSMatrix<F, T, RATE> {
     /// Returns the first row
     pub fn row(&self) -> &[F; T] {
         &self.row
@@ -259,7 +261,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> SparseMDSMatrix<F, T, RATE>
             .row
             .iter()
             .zip(words.iter())
-            .fold(F::zero(), |acc, (e, cell)| acc + (*e * *cell));
+            .fold(F::ZERO, |acc, (e, cell)| acc + (*e * *cell));
 
         for ((new_word, col_el), word) in (state.0)
             .iter_mut()
@@ -272,7 +274,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> SparseMDSMatrix<F, T, RATE>
     }
 }
 
-impl<F: FieldExt, const T: usize, const RATE: usize> From<MDSMatrix<F, T, RATE>>
+impl<F: PrimeField, const T: usize, const RATE: usize> From<MDSMatrix<F, T, RATE>>
     for SparseMDSMatrix<F, T, RATE>
 {
     /// Assert the form and represent an MDS matrix as a sparse MDS matrix
@@ -280,11 +282,11 @@ impl<F: FieldExt, const T: usize, const RATE: usize> From<MDSMatrix<F, T, RATE>>
         let mds = mds.0;
         for (i, row) in mds.0.iter().enumerate().skip(1) {
             for (j, _) in row.iter().enumerate().skip(1) {
-                assert_eq!(row[j], if i != j { F::zero() } else { F::one() });
+                assert_eq!(row[j], if i != j { F::ZERO } else { F::ONE });
             }
         }
 
-        let (mut row, mut col_hat) = ([F::zero(); T], [F::zero(); RATE]);
+        let (mut row, mut col_hat) = ([F::ZERO; T], [F::ZERO; RATE]);
         for (row_el, el) in row.iter_mut().zip(mds.0[0].iter()) {
             *row_el = *el
         }
@@ -296,7 +298,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> From<MDSMatrix<F, T, RATE>>
     }
 }
 
-impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
+impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize> Spec<F, T, RATE> {
     /// Given number of round parameters constructs new Posedion instance
     /// calculating unoptimized round constants with reference `Grain` then
     /// calculates optimized constants and sparse matrices
@@ -327,7 +329,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
         assert_eq!(constants.len(), number_of_rounds);
 
         // Calculate optimized constants for first half of the full rounds
-        let mut constants_start: Vec<[F; T]> = vec![[F::zero(); T]; r_f_half];
+        let mut constants_start: Vec<[F; T]> = vec![[F::ZERO; T]; r_f_half];
         constants_start[0] = constants[0].clone();
         for (optimized, constants) in constants_start
             .iter_mut()
@@ -339,7 +341,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
 
         // Calculate constants for partial rounds
         let mut acc = constants[r_f_half + r_p].clone();
-        let mut constants_partial = vec![F::zero(); r_p];
+        let mut constants_partial = vec![F::ZERO; r_p];
         for (optimized, constants) in constants_partial
             .iter_mut()
             .rev()
@@ -348,7 +350,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
             let mut tmp = inverse_mds.mul_constants(&acc);
             *optimized = tmp[0];
 
-            tmp[0] = F::zero();
+            tmp[0] = F::ZERO;
             for ((acc, tmp), constant) in acc
                 .iter_mut()
                 .zip(tmp.into_iter())
@@ -360,7 +362,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
         constants_start.push(inverse_mds.mul_constants(&acc));
 
         // Calculate optimized constants for ending half of the full rounds
-        let mut constants_end: Vec<[F; T]> = vec![[F::zero(); T]; r_f_half - 1];
+        let mut constants_end: Vec<[F; T]> = vec![[F::ZERO; T]; r_f_half - 1];
         for (optimized, constants) in constants_end
             .iter_mut()
             .zip(constants.iter().skip(r_f_half + r_p + 1))
@@ -396,20 +398,22 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Spec<F, T, RATE> {
 
 #[cfg(test)]
 pub(super) mod tests {
-    use halo2curves::FieldExt;
+    use halo2curves::group::ff::{FromUniformBytes, PrimeField};
+    use halo2curves::serde::SerdeObject;
 
     use super::MDSMatrix;
     use crate::grain::Grain;
 
-    /// We want to keep unoptimized parameters to cross test with optimized one
-    pub(crate) struct SpecRef<F: FieldExt, const T: usize, const RATE: usize> {
+    /// We want to keep non-optimized parameters to cross test with optimized
+    /// one
+    pub(crate) struct SpecRef<F: PrimeField, const T: usize, const RATE: usize> {
         pub(crate) r_f: usize,
         pub(crate) r_p: usize,
         pub(crate) mds: MDSMatrix<F, T, RATE>,
         pub(crate) constants: Vec<[F; T]>,
     }
 
-    impl<F: FieldExt, const T: usize, const RATE: usize> SpecRef<F, T, RATE> {
+    impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize> SpecRef<F, T, RATE> {
         pub(crate) fn new(r_f: usize, r_p: usize) -> Self {
             let (constants, mds) = Grain::generate(r_f, r_p);
 

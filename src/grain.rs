@@ -1,14 +1,16 @@
+use halo2curves::group::ff::{FromUniformBytes, PrimeField};
+use halo2curves::serde::SerdeObject;
+
 use crate::spec::MDSMatrix;
-use halo2curves::FieldExt;
 use std::marker::PhantomData;
 
 /// Grain initializes round constants and MDS matrix at given sponge parameters
-pub(super) struct Grain<F: FieldExt, const T: usize, const RATE: usize> {
+pub(super) struct Grain<F: PrimeField, const T: usize, const RATE: usize> {
     bit_sequence: Vec<bool>,
     _field: PhantomData<F>,
 }
 
-impl<F: FieldExt, const T: usize, const RATE: usize> Grain<F, T, RATE> {
+impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize> Grain<F, T, RATE> {
     pub(crate) fn generate(r_f: usize, r_p: usize) -> (Vec<[F; T]>, MDSMatrix<F, T, RATE>) {
         debug_assert!(T > 1 && T == RATE + 1);
 
@@ -49,7 +51,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Grain<F, T, RATE> {
         let number_of_rounds = r_p as usize + r_f as usize;
         let constants = (0..number_of_rounds)
             .map(|_| {
-                let mut round_constants = [F::zero(); T];
+                let mut round_constants = [F::ZERO; T];
                 for c in round_constants.iter_mut() {
                     *c = grain.next_field_element();
                 }
@@ -57,7 +59,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Grain<F, T, RATE> {
             })
             .collect::<Vec<[F; T]>>();
 
-        let (mut xs, mut ys) = ([F::zero(); T], [F::zero(); T]);
+        let (mut xs, mut ys) = ([F::ZERO; T], [F::ZERO; T]);
         for x in xs.iter_mut() {
             *x = grain.next_field_element_without_rejection();
         }
@@ -124,7 +126,7 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Grain<F, T, RATE> {
             view[i / 8] |= if bit { 1 << (i % 8) } else { 0 };
         }
 
-        F::from_bytes_wide(&bytes)
+        F::from_uniform_bytes(&bytes)
     }
 
     fn new_bit(&mut self) -> bool {
@@ -142,7 +144,9 @@ impl<F: FieldExt, const T: usize, const RATE: usize> Grain<F, T, RATE> {
     }
 }
 
-impl<F: FieldExt, const T: usize, const RATE: usize> Iterator for Grain<F, T, RATE> {
+impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize> Iterator
+    for Grain<F, T, RATE>
+{
     type Item = bool;
 
     fn next(&mut self) -> Option<Self::Item> {
