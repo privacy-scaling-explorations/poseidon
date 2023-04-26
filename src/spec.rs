@@ -1,9 +1,6 @@
-use std::ops::Index;
-
-use halo2curves::group::ff::{FromUniformBytes, PrimeField};
-use halo2curves::serde::SerdeObject;
-
 use crate::{grain::Grain, matrix::Matrix};
+use halo2curves::group::ff::{FromUniformBytes, PrimeField};
+use std::ops::Index;
 
 /// `State` is structure `T` sized field elements that are subjected to
 /// permutation
@@ -77,7 +74,7 @@ pub struct Spec<F: PrimeField, const T: usize, const RATE: usize> {
 impl<F: PrimeField, const T: usize, const RATE: usize> Spec<F, T, RATE> {
     /// Number of full rounds
     pub fn r_f(&self) -> usize {
-        self.r_f.clone()
+        self.r_f
     }
     /// Set of MDS Matrices used in permutation line
     pub fn mds_matrices(&self) -> &MDSMatrices<F, T, RATE> {
@@ -298,7 +295,7 @@ impl<F: PrimeField, const T: usize, const RATE: usize> From<MDSMatrix<F, T, RATE
     }
 }
 
-impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize> Spec<F, T, RATE> {
+impl<F: FromUniformBytes<64>, const T: usize, const RATE: usize> Spec<F, T, RATE> {
     /// Given number of round parameters constructs new Posedion instance
     /// calculating unoptimized round constants with reference `Grain` then
     /// calculates optimized constants and sparse matrices
@@ -330,7 +327,7 @@ impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize> S
 
         // Calculate optimized constants for first half of the full rounds
         let mut constants_start: Vec<[F; T]> = vec![[F::ZERO; T]; r_f_half];
-        constants_start[0] = constants[0].clone();
+        constants_start[0] = constants[0];
         for (optimized, constants) in constants_start
             .iter_mut()
             .skip(1)
@@ -340,7 +337,7 @@ impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize> S
         }
 
         // Calculate constants for partial rounds
-        let mut acc = constants[r_f_half + r_p].clone();
+        let mut acc = constants[r_f_half + r_p];
         let mut constants_partial = vec![F::ZERO; r_p];
         for (optimized, constants) in constants_partial
             .iter_mut()
@@ -351,10 +348,7 @@ impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize> S
             *optimized = tmp[0];
 
             tmp[0] = F::ZERO;
-            for ((acc, tmp), constant) in acc
-                .iter_mut()
-                .zip(tmp.into_iter())
-                .zip(constants.into_iter())
+            for ((acc, tmp), constant) in acc.iter_mut().zip(tmp.into_iter()).zip(constants.iter())
             {
                 *acc = tmp + constant
             }
