@@ -1,7 +1,5 @@
-use halo2curves::group::ff::{FromUniformBytes, PrimeField};
-use halo2curves::serde::SerdeObject;
-
 use crate::spec::MDSMatrix;
+use halo2curves::group::ff::{FromUniformBytes, PrimeField};
 use std::marker::PhantomData;
 
 /// Grain initializes round constants and MDS matrix at given sponge parameters
@@ -10,7 +8,7 @@ pub(super) struct Grain<F: PrimeField, const T: usize, const RATE: usize> {
     _field: PhantomData<F>,
 }
 
-impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize> Grain<F, T, RATE> {
+impl<F: FromUniformBytes<64>, const T: usize, const RATE: usize> Grain<F, T, RATE> {
     pub(crate) fn generate(r_f: usize, r_p: usize) -> (Vec<[F; T]>, MDSMatrix<F, T, RATE>) {
         debug_assert!(T > 1 && T == RATE + 1);
 
@@ -48,7 +46,7 @@ impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize> G
         }
         assert_eq!(grain.bit_sequence.len(), 80);
 
-        let number_of_rounds = r_p as usize + r_f as usize;
+        let number_of_rounds = r_p + r_f;
         let constants = (0..number_of_rounds)
             .map(|_| {
                 let mut round_constants = [F::ZERO; T];
@@ -144,9 +142,7 @@ impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize> G
     }
 }
 
-impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize> Iterator
-    for Grain<F, T, RATE>
-{
+impl<F: FromUniformBytes<64>, const T: usize, const RATE: usize> Iterator for Grain<F, T, RATE> {
     type Item = bool;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -158,7 +154,7 @@ impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize> I
 }
 
 fn append_bits<T: Into<u128>>(vec: &mut Vec<bool>, n: usize, from: T) {
-    let val = from.into() as u128;
+    let val = from.into();
     for i in (0..n).rev() {
         vec.push((val >> i) & 1 != 0);
     }

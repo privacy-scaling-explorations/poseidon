@@ -1,7 +1,5 @@
-use halo2curves::group::ff::{FromUniformBytes, PrimeField};
-use halo2curves::serde::SerdeObject;
-
 use crate::{Spec, State};
+use halo2curves::group::ff::{FromUniformBytes, PrimeField};
 
 /// Poseidon hasher that maintains state and inputs and yields single element
 /// output when desired
@@ -12,9 +10,7 @@ pub struct Poseidon<F: PrimeField, const T: usize, const RATE: usize> {
     absorbing: Vec<F>,
 }
 
-impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize>
-    Poseidon<F, T, RATE>
-{
+impl<F: FromUniformBytes<64>, const T: usize, const RATE: usize> Poseidon<F, T, RATE> {
     /// Constructs a clear state poseidon instance
     pub fn new(r_f: usize, r_p: usize) -> Self {
         Self {
