@@ -7,16 +7,34 @@ use std::ops::Index;
 #[derive(Clone, Debug, PartialEq)]
 pub struct State<F: PrimeField, const T: usize>(pub(crate) [F; T]);
 
-impl<F: PrimeField, const T: usize> Default for State<F, T> {
-    /// The capacity value is 2**64 + (o − 1) where o the output length.
-    fn default() -> Self {
-        let mut state = [F::ZERO; T];
-        state[0] = F::from_u128(1 << 64);
-        State(state)
+pub(crate) trait HashMod<F: PrimeField, const T: usize> {
+    fn domain() -> F;
+}
+
+pub(crate) struct VariableLengthMod;
+pub(crate) struct MerkleMod;
+
+impl<F: PrimeField, const T: usize> HashMod<F, T> for VariableLengthMod {
+    fn domain() -> F {
+        F::from_u128(1 << 64)
+    }
+}
+
+impl<F: PrimeField, const T: usize> HashMod<F, T> for MerkleMod {
+    fn domain() -> F {
+        let arity = T - 1;
+        F::from_u128((1 << arity) - 1)
     }
 }
 
 impl<F: PrimeField, const T: usize> State<F, T> {
+    /// The capacity value is `2**arity-1`` where o the output length.
+    pub(crate) fn new<Mod: HashMod<F, T>>() -> Self {
+        let mut state: [F; T] = [F::ZERO; T];
+        state[0] = Mod::domain();
+        State(state)
+    }
+
     /// Applies sbox for all elements of the state.
     /// Only supports `alpha = 5` sbox case.
     pub(crate) fn sbox_full(&mut self) {
@@ -153,6 +171,11 @@ impl<F: PrimeField, const T: usize, const RATE: usize> Index<usize> for MDSMatri
 }
 
 impl<F: PrimeField, const T: usize, const RATE: usize> MDSMatrix<F, T, RATE> {
+    #[cfg(test)]
+    pub(crate) const fn from(mds: [[F; T]; T]) -> Self {
+        MDSMatrix(Matrix(mds))
+    }
+
     /// Applies `MDSMatrix` to the state
     pub(crate) fn apply(&self, state: &mut State<F, T>) {
         state.0 = self.0.mul_vector(&state.0);
@@ -296,12 +319,31 @@ impl<F: PrimeField, const T: usize, const RATE: usize> From<MDSMatrix<F, T, RATE
 }
 
 impl<F: FromUniformBytes<64>, const T: usize, const RATE: usize> Spec<F, T, RATE> {
+    /// From predefined constants
+    pub fn from(r_f: usize, r_p: usize, constants: &[F], mds: &MDSMatrix<F, T, RATE>) -> Self {
+        let constants = constants
+            .chunks(T)
+            .map(|chunk| chunk.try_into().unwrap())
+            .collect::<Vec<_>>();
+        let constants = Self::calculate_optimized_constants(r_f, r_p, &constants, mds);
+        let (sparse_matrices, pre_sparse_mds) = Self::calculate_sparse_matrices(r_p, mds);
+        Self {
+            r_f,
+            constants,
+            mds_matrices: MDSMatrices {
+                mds: mds.clone(),
+                sparse_matrices,
+                pre_sparse_mds,
+            },
+        }
+    }
+
     /// Given number of round parameters constructs new Posedion instance
     /// calculating unoptimized round constants with reference `Grain` then
     /// calculates optimized constants and sparse matrices
     pub fn new(r_f: usize, r_p: usize) -> Self {
-        let (unoptimized_constants, mds) = Grain::generate(r_f, r_p);
-        let constants = Self::calculate_optimized_constants(r_f, r_p, unoptimized_constants, &mds);
+        let (constants, mds) = Grain::generate(r_f, r_p);
+        let constants = Self::calculate_optimized_constants(r_f, r_p, &constants, &mds);
         let (sparse_matrices, pre_sparse_mds) = Self::calculate_sparse_matrices(r_p, &mds);
 
         Self {
@@ -318,7 +360,7 @@ impl<F: FromUniformBytes<64>, const T: usize, const RATE: usize> Spec<F, T, RATE
     fn calculate_optimized_constants(
         r_f: usize,
         r_p: usize,
-        constants: Vec<[F; T]>,
+        constants: &[[F; T]],
         mds: &MDSMatrix<F, T, RATE>,
     ) -> OptimizedConstants<F, T> {
         let inverse_mds = mds.invert();
@@ -393,7 +435,6 @@ impl<F: FromUniformBytes<64>, const T: usize, const RATE: usize> Spec<F, T, RATE
 #[cfg(test)]
 pub(super) mod tests {
     use halo2curves::group::ff::{FromUniformBytes, PrimeField};
-    use halo2curves::serde::SerdeObject;
 
     use super::MDSMatrix;
     use crate::grain::Grain;
@@ -407,7 +448,7 @@ pub(super) mod tests {
         pub(crate) constants: Vec<[F; T]>,
     }
 
-    impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize> SpecRef<F, T, RATE> {
+    impl<F: FromUniformBytes<64>, const T: usize, const RATE: usize> SpecRef<F, T, RATE> {
         pub(crate) fn new(r_f: usize, r_p: usize) -> Self {
             let (constants, mds) = Grain::generate(r_f, r_p);
 

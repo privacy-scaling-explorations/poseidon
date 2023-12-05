@@ -57,7 +57,7 @@ mod tests {
     /// We want to keep non-optimized poseidon construction and permutation to
     /// cross test with optimized one
     impl<F: PrimeField, const T: usize, const RATE: usize> SpecRef<F, T, RATE> {
-        fn permute(&self, state: &mut State<F, T>) {
+        pub(crate) fn permute(&self, state: &mut State<F, T>) {
             let (r_f, r_p) = (self.r_f / 2, self.r_p);
 
             for constants in self.constants.iter().take(r_f) {
@@ -151,7 +151,7 @@ mod tests {
             let mut state_0 = state.clone();
 
             spec_ref.permute(&mut state_0);
-            let expected = vec![
+            let expected = [
                 "7853200120776062878684798364095072458815029376092732009249414926327459813530",
                 "7142104613055408817911962100316808866448378443474503659992478482890339429929",
                 "6549537674122432311777789598043107870002137484850126429160507761192163713804",
@@ -187,7 +187,7 @@ mod tests {
             let mut state_0 = state.clone();
 
             spec_ref.permute(&mut state_0);
-            let expected = vec![
+            let expected = [
                 "18821383157269793795438455681495246036402687001665670618754263018637548127333",
                 "7817711165059374331357136443537800893307845083525445872661165200086166013245",
                 "16733335996448830230979566039396561240864200624113062088822991822580465420551",
