@@ -130,7 +130,7 @@ impl<F: FromUniformBytes<64>, const T: usize, const RATE: usize> Grain<F, T, RAT
     fn new_bit(&mut self) -> bool {
         // See supplementary material Section F. Step 2.
         // https://eprint.iacr.org/2019/458.pdf
-        let new_bit = vec![62, 51, 38, 23, 13usize]
+        let new_bit = [62, 51, 38, 23, 13usize]
             .iter()
             .fold(self.bit_sequence[0], |acc, pos| {
                 acc ^ self.bit_sequence[*pos]
