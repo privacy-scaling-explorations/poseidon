@@ -6,9 +6,11 @@
 
 mod grain;
 mod matrix;
+mod merkle;
 mod permutation;
 mod poseidon;
 mod spec;
 
+pub use crate::merkle::Merkle;
 pub use crate::poseidon::Poseidon;
 pub use crate::spec::{MDSMatrices, MDSMatrix, SparseMDSMatrix, Spec, State};

@@ -57,7 +57,7 @@ mod tests {
     /// We want to keep non-optimized poseidon construction and permutation to
     /// cross test with optimized one
     impl<F: PrimeField, const T: usize, const RATE: usize> SpecRef<F, T, RATE> {
-        fn permute(&self, state: &mut State<F, T>) {
+        pub(crate) fn permute(&self, state: &mut State<F, T>) {
             let (r_f, r_p) = (self.r_f / 2, self.r_p);
 
             for constants in self.constants.iter().take(r_f) {

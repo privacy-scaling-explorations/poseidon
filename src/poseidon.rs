@@ -1,4 +1,4 @@
-use crate::{Spec, State};
+use crate::{spec::VariableLengthMod, Spec, State};
 use halo2curves::group::ff::{FromUniformBytes, PrimeField};
 
 /// Poseidon hasher that maintains state and inputs and yields single element
@@ -15,9 +15,15 @@ impl<F: FromUniformBytes<64>, const T: usize, const RATE: usize> Poseidon<F, T, 
     pub fn new(r_f: usize, r_p: usize) -> Self {
         Self {
             spec: Spec::new(r_f, r_p),
-            state: State::default(),
+            state: State::new::<VariableLengthMod>(),
             absorbing: Vec::new(),
         }
+    }
+
+    /// Resets the state and panics if absorbing line is not empty
+    pub fn reset(&mut self) {
+        assert!(self.absorbing.is_empty());
+        self.state = State::new::<VariableLengthMod>();
     }
 
     /// Appends elements to the absorption line updates state while `RATE` is
@@ -71,6 +77,8 @@ impl<F: FromUniformBytes<64>, const T: usize, const RATE: usize> Poseidon<F, T, 
 
 #[cfg(test)]
 mod tests {
+
+    use crate::spec::VariableLengthMod;
     use crate::{Poseidon, State};
     use halo2curves::bn256::Fr;
     use halo2curves::group::ff::Field;
@@ -100,7 +108,7 @@ mod tests {
         let mut inputs = inputs.clone();
         inputs.push(Fr::one());
         assert!(inputs.len() % RATE == 0);
-        let mut state = State::<Fr, T>::default();
+        let mut state = State::<Fr, T>::new::<VariableLengthMod>();
         for chunk in inputs.chunks(RATE) {
             let mut inputs = vec![Fr::zero()];
             inputs.extend_from_slice(chunk);
@@ -130,7 +138,7 @@ mod tests {
         inputs.extend(extra_padding);
 
         assert!(inputs.len() % RATE == 0);
-        let mut state = State::<Fr, T>::default();
+        let mut state = State::<Fr, T>::new::<VariableLengthMod>();
         for chunk in inputs.chunks(RATE) {
             let mut inputs = vec![Fr::zero()];
             inputs.extend_from_slice(chunk);
@@ -168,7 +176,7 @@ mod tests {
                         }
 
                         let spec = poseidon.spec.clone();
-                        let mut state = State::<Fr, $T>::default();
+                        let mut state = State::<Fr, $T>::new::<VariableLengthMod>();
                         for chunk in inputs.chunks($RATE) {
                             // First element is zero
                             let mut round_inputs = vec![Fr::zero()];
