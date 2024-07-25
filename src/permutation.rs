@@ -50,7 +50,7 @@ impl<F: PrimeField, const T: usize, const RATE: usize> Spec<F, T, RATE> {
 #[cfg(test)]
 mod tests {
     use super::State;
-    use crate::spec::{tests::SpecRef, Spec};
+    use crate::spec::{Spec, SpecRef};
     use halo2curves::bn256::Fr;
     use halo2curves::group::ff::PrimeField;
 

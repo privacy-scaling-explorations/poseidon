@@ -142,7 +142,14 @@ impl<F: PrimeField, const T: usize, const RATE: usize> MDSMatrices<F, T, RATE> {
 
 /// `MDSMatrix` is applied to `State` to achive linear layer of Poseidon
 #[derive(Clone, Debug)]
-pub struct MDSMatrix<F: PrimeField, const T: usize, const RATE: usize>(pub(crate) Matrix<F, T>);
+pub struct MDSMatrix<F: PrimeField, const T: usize, const RATE: usize>(Matrix<F, T>);
+
+impl<F: PrimeField, const T: usize, const RATE: usize> MDSMatrix<F, T, RATE> {
+    /// Get elements of mds matrix
+    pub fn as_vec(&self) -> Vec<Vec<F>> {
+        self.0 .0.iter().map(|row| row.to_vec()).collect()
+    }
+}
 
 impl<F: PrimeField, const T: usize, const RATE: usize> Index<usize> for MDSMatrix<F, T, RATE> {
     type Output = [F; T];
@@ -390,33 +397,43 @@ impl<F: FromUniformBytes<64>, const T: usize, const RATE: usize> Spec<F, T, RATE
     }
 }
 
-#[cfg(test)]
-pub(super) mod tests {
-    use halo2curves::group::ff::{FromUniformBytes, PrimeField};
-    use halo2curves::serde::SerdeObject;
+/// `Spec` holds unoptimized construction parameters as well as constants
+/// that are used in permutation step.
+#[derive(Debug, Clone)]
+pub struct SpecRef<F: PrimeField, const T: usize, const RATE: usize> {
+    pub(crate) r_f: usize,
+    pub(crate) r_p: usize,
+    pub(crate) mds: MDSMatrix<F, T, RATE>,
+    pub(crate) constants: Vec<[F; T]>,
+}
 
-    use super::MDSMatrix;
-    use crate::grain::Grain;
+impl<F: FromUniformBytes<64>, const T: usize, const RATE: usize> SpecRef<F, T, RATE> {
+    /// Generate poseidion parameters
+    pub fn new(r_f: usize, r_p: usize) -> Self {
+        let (constants, mds) = Grain::generate(r_f, r_p);
 
-    /// We want to keep non-optimized parameters to cross test with optimized
-    /// one
-    pub(crate) struct SpecRef<F: PrimeField, const T: usize, const RATE: usize> {
-        pub(crate) r_f: usize,
-        pub(crate) r_p: usize,
-        pub(crate) mds: MDSMatrix<F, T, RATE>,
-        pub(crate) constants: Vec<[F; T]>,
+        SpecRef {
+            r_f,
+            r_p,
+            mds,
+            constants,
+        }
     }
 
-    impl<F: SerdeObject + FromUniformBytes<64>, const T: usize, const RATE: usize> SpecRef<F, T, RATE> {
-        pub(crate) fn new(r_f: usize, r_p: usize) -> Self {
-            let (constants, mds) = Grain::generate(r_f, r_p);
-
-            SpecRef {
-                r_f,
-                r_p,
-                mds,
-                constants,
-            }
-        }
+    /// Number of full rounds
+    pub fn r_f(&self) -> usize {
+        self.r_f
+    }
+    /// Number of partial rounds
+    pub fn r_p(&self) -> usize {
+        self.r_p
+    }
+    /// Set of MDS Matrices used in permutation line
+    pub fn mds_matrices(&self) -> &MDSMatrix<F, T, RATE> {
+        &self.mds
+    }
+    /// Optimised round constants
+    pub fn constants(&self) -> &[[F; T]] {
+        &self.constants
     }
 }
